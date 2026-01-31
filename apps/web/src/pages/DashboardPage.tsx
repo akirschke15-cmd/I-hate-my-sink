@@ -1,0 +1,187 @@
+import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useOffline } from '../contexts/OfflineContext';
+import { Button } from '../components/ui';
+
+export function DashboardPage() {
+  const { user, logout } = useAuth();
+  const { isOnline, pendingSyncCount, isSyncing, syncPending } = useOffline();
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+          <h1 className="text-xl font-bold text-gray-900">I Hate My Sink</h1>
+          <div className="flex items-center gap-4">
+            {/* Online/Offline Status */}
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}
+              />
+              <span className="text-sm text-gray-600">{isOnline ? 'Online' : 'Offline'}</span>
+            </div>
+
+            {/* Pending Sync Badge */}
+            {pendingSyncCount > 0 && (
+              <button
+                onClick={syncPending}
+                disabled={isSyncing || !isOnline}
+                className="flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-sm text-yellow-800 hover:bg-yellow-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSyncing ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-yellow-800 border-t-transparent" />
+                ) : (
+                  <span className="font-medium">{pendingSyncCount}</span>
+                )}
+                <span>pending</span>
+              </button>
+            )}
+
+            {/* User Menu */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">
+                {user?.firstName} {user?.lastName}
+              </span>
+              <Button variant="secondary" size="sm" onClick={logout}>
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="mx-auto max-w-7xl px-4 py-8">
+        {/* Welcome Card */}
+        <div className="mb-8 rounded-xl bg-white p-6 shadow-sm">
+          <h2 className="mb-2 text-2xl font-bold text-gray-900">
+            Welcome back, {user?.firstName}!
+          </h2>
+          <p className="text-gray-600">
+            You're logged in as a <span className="font-medium">{user?.role}</span> at{' '}
+            <span className="font-medium">{user?.companyName}</span>.
+          </p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ActionCard
+              title="New Measurement"
+              description="Capture cabinet and countertop dimensions"
+              to="/customers"
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              }
+            />
+            <ActionCard
+              title="View Customers"
+              description="Browse and manage your customer list"
+              to="/customers"
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+              }
+            />
+            <ActionCard
+              title="Browse Sinks"
+              description="Find the perfect sink match"
+              to="/sinks"
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+              }
+            />
+            <ActionCard
+              title="Create Quote"
+              description="Generate a new quote for a customer"
+              to="/quotes/new"
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              }
+            />
+          </div>
+        </div>
+
+        {/* Offline Notice */}
+        {!isOnline && (
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+            <div className="flex items-start gap-3">
+              <svg
+                className="h-5 w-5 text-yellow-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <div>
+                <h4 className="font-medium text-yellow-800">You're currently offline</h4>
+                <p className="mt-1 text-sm text-yellow-700">
+                  You can still capture measurements and create quotes. They'll sync automatically
+                  when you're back online.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function ActionCard({
+  title,
+  description,
+  icon,
+  to,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  to: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex flex-col items-start rounded-xl bg-white p-6 text-left shadow-sm transition-shadow hover:shadow-md"
+    >
+      <div className="mb-4 rounded-lg bg-primary-100 p-3 text-primary-600">{icon}</div>
+      <h4 className="font-semibold text-gray-900">{title}</h4>
+      <p className="mt-1 text-sm text-gray-600">{description}</p>
+    </Link>
+  );
+}
