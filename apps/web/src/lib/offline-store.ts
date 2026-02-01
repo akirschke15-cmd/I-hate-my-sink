@@ -130,11 +130,6 @@ export async function getMeasurementsByCustomer(
   return db.getAllFromIndex('measurements', 'by-customer', customerId);
 }
 
-export async function deleteMeasurement(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('measurements', id);
-}
-
 // Customer operations
 export async function saveCustomer(customer: IHMSDBSchema['customers']['value']): Promise<void> {
   const db = await getDB();
@@ -146,11 +141,6 @@ export async function getCustomer(
 ): Promise<IHMSDBSchema['customers']['value'] | undefined> {
   const db = await getDB();
   return db.get('customers', id);
-}
-
-export async function getAllCustomers(): Promise<IHMSDBSchema['customers']['value'][]> {
-  const db = await getDB();
-  return db.getAll('customers');
 }
 
 // Pending sync operations
@@ -167,11 +157,6 @@ export async function getPendingSyncs(): Promise<PendingSync<unknown>[]> {
 export async function removePendingSync(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('pendingSync', id);
-}
-
-export async function clearPendingSyncs(): Promise<void> {
-  const db = await getDB();
-  await db.clear('pendingSync');
 }
 
 // Auth cache operations

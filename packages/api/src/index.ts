@@ -5,6 +5,8 @@ import {
   companyRouter,
   customerRouter,
   measurementRouter,
+  sinkRouter,
+  quotesRouter,
 } from './routers';
 
 export const appRouter = router({
@@ -13,6 +15,8 @@ export const appRouter = router({
   company: companyRouter,
   customer: customerRouter,
   measurement: measurementRouter,
+  sink: sinkRouter,
+  quote: quotesRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, pgEnum, integer } from 'drizzle-orm/pg-core';
 import { companies } from './companies';
 import { customers } from './customers';
 import { users } from './users';
@@ -37,6 +37,13 @@ export const quotes = pgTable('quotes', {
   // Customer acceptance
   signatureUrl: text('signature_url'),
   signedAt: timestamp('signed_at', { withTimezone: true }),
+  // Email tracking
+  emailedAt: timestamp('emailed_at', { withTimezone: true }),
+  emailCount: integer('email_count').notNull().default(0),
+  // Workiz integration
+  workizJobId: varchar('workiz_job_id', { length: 100 }),
+  workizJobUrl: text('workiz_job_url'),
+  workizSyncedAt: timestamp('workiz_synced_at', { withTimezone: true }),
   // Validity
   validUntil: timestamp('valid_until', { withTimezone: true }),
   notes: text('notes'),

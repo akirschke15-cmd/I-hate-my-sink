@@ -28,15 +28,11 @@ export function CustomerDetailPage() {
   });
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this customer? This cannot be undone.')) {
-      deleteCustomer.mutate({ id: id! });
-    }
+    deleteCustomer.mutate({ id: id! });
   };
 
   const handleDeleteMeasurement = (measurementId: string) => {
-    if (confirm('Delete this measurement?')) {
-      deleteMeasurement.mutate({ id: measurementId });
-    }
+    deleteMeasurement.mutate({ id: measurementId });
   };
 
   if (customerLoading) {

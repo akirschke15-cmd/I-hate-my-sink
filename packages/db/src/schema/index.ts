@@ -5,3 +5,4 @@ export * from './sinks';
 export * from './measurements';
 export * from './quotes';
 export * from './quote-line-items';
+export * from './email-logs';

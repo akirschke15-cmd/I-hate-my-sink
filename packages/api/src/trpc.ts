@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import jwt from 'jsonwebtoken';
 import type { UserRole } from '@ihms/shared';
+import { jwtConfig } from './config/jwt';
 
 export interface TokenPayload {
   userId: string;
@@ -14,7 +15,7 @@ export interface Context {
   user: TokenPayload | null;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+const JWT_SECRET = jwtConfig.secret;
 
 export function createContext({ req }: CreateExpressContextOptions): Context {
   const authHeader = req.headers.authorization;

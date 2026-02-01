@@ -1,10 +1,10 @@
-import { appRouter } from './index';
+import { appRouter, type AppRouter } from './index';
 import type { Context } from './trpc';
 
 /**
  * Create a test caller for the tRPC router
  */
-export function createTestCaller(ctx: Context) {
+export function createTestCaller(ctx: Context): ReturnType<AppRouter['createCaller']> {
   return appRouter.createCaller(ctx);
 }
 

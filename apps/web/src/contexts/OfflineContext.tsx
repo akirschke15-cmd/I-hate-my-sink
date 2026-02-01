@@ -30,26 +30,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Check pending sync count
-  useEffect(() => {
-    async function checkPending() {
-      const pending = await getPendingSyncs();
-      setPendingSyncCount(pending.length);
-    }
-
-    checkPending();
-    const interval = setInterval(checkPending, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-sync when coming back online
-  useEffect(() => {
-    if (isOnline && pendingSyncCount > 0) {
-      syncPending();
-    }
-  }, [isOnline]);
-
+  // Define syncPending before the useEffects that reference it
   const syncPending = useCallback(async () => {
     if (isSyncing || !isOnline) return;
 
@@ -72,6 +53,26 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     }
   }, [isOnline, isSyncing]);
 
+  // Check pending sync count
+  useEffect(() => {
+    async function checkPending() {
+      const pending = await getPendingSyncs();
+      setPendingSyncCount(pending.length);
+    }
+
+    checkPending();
+    const interval = setInterval(checkPending, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-sync when coming back online
+  useEffect(() => {
+    if (isOnline && pendingSyncCount > 0) {
+      syncPending();
+    }
+  }, [isOnline, pendingSyncCount, syncPending]);
+
   return (
     <OfflineContext.Provider
       value={{
@@ -87,26 +88,39 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 }
 
 async function processSyncItem(item: PendingSync<unknown>): Promise<void> {
-  const token = localStorage.getItem('accessToken');
-  if (!token) {
-    throw new Error('No auth token available');
-  }
+  // TODO: Implement actual sync with tRPC mutations
+  // This is currently a DEMO/PLACEHOLDER implementation
+  //
+  // Real implementation would:
+  // 1. Get the tRPC client instance
+  // 2. Call appropriate mutation based on item.entity and item.type
+  // 3. Handle errors and retries
+  //
+  // Example:
+  // switch (item.entity) {
+  //   case 'customer':
+  //     if (item.type === 'create') await trpc.customer.create.mutate(item.data);
+  //     else if (item.type === 'update') await trpc.customer.update.mutate(item.data);
+  //     break;
+  //   case 'measurement':
+  //     if (item.type === 'create') await trpc.measurement.create.mutate(item.data);
+  //     else if (item.type === 'update') await trpc.measurement.update.mutate(item.data);
+  //     break;
+  //   case 'quote':
+  //     if (item.type === 'create') await trpc.quote.create.mutate(item.data);
+  //     else if (item.type === 'update') await trpc.quote.update.mutate(item.data);
+  //     break;
+  // }
 
-  // This would be expanded to handle different entity types and operations
-  // For now, it's a placeholder for the sync logic
-  console.log('Processing sync item:', item);
+  console.log('[OfflineSync] Demo mode - would sync:', {
+    id: item.id,
+    entity: item.entity,
+    type: item.type,
+    createdAt: item.createdAt,
+    retryCount: item.retryCount,
+  });
 
-  // Example API call structure:
-  // const response = await fetch(`/trpc/${item.entity}.${item.type}`, {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     'Authorization': `Bearer ${token}`,
-  //   },
-  //   body: JSON.stringify(item.data),
-  // });
-
-  // For now, just simulate success
+  // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 100));
 }
 

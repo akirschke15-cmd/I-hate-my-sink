@@ -7,6 +7,12 @@ import { NewCustomerPage } from './pages/NewCustomerPage';
 import { CustomerDetailPage } from './pages/CustomerDetailPage';
 import { EditCustomerPage } from './pages/EditCustomerPage';
 import { NewMeasurementPage } from './pages/NewMeasurementPage';
+import { SinksPage } from './pages/SinksPage';
+import { SinkMatchPage } from './pages/SinkMatchPage';
+import { QuotesPage } from './pages/QuotesPage';
+import { NewQuotePage } from './pages/NewQuotePage';
+import { QuoteDetailPage } from './pages/QuoteDetailPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -75,6 +81,54 @@ function App() {
         element={
           <ProtectedRoute>
             <NewMeasurementPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sinks"
+        element={
+          <ProtectedRoute>
+            <SinksPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/measurements/:id/match"
+        element={
+          <ProtectedRoute>
+            <SinkMatchPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/quotes"
+        element={
+          <ProtectedRoute>
+            <QuotesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/quotes/new"
+        element={
+          <ProtectedRoute>
+            <NewQuotePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/quotes/:id"
+        element={
+          <ProtectedRoute>
+            <QuoteDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <AnalyticsPage />
           </ProtectedRoute>
         }
       />

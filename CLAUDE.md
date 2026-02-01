@@ -33,6 +33,19 @@ pnpm format       # Prettier
 pnpm build
 ```
 
+## Project Documentation
+Reference these files for project context:
+- @IHMS_files/00-README.md
+- @IHMS_files/01-BUSINESS-MODEL.md
+- @IHMS_files/02-COMPETITIVE-ANALYSIS.md
+- @IHMS_files/03-DEVELOPMENT-ROADMAP.md
+- @IHMS_files/05-PRD.md
+- @IHMS_files/06-TECHNICAL-ARCHITECTURE.md
+- @IHMS_files/HYBRID_AGENT_STRATEGY.md
+- @IHMS_files/project-preferences.md
+- @IHMS_files/REQUIREMENT-CONFORMANCE-FRAMEWORK.md
+- @IHMS_files/SINK_CONFIGURATOR_IMPLEMENTATION_PLAN.md
+
 ## Architecture
 
 ### Monorepo Structure

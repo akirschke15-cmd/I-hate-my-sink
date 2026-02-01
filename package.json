@@ -14,11 +14,20 @@
     "db:migrate": "pnpm --filter @ihms/db migrate",
     "db:push": "pnpm --filter @ihms/db push",
     "db:studio": "pnpm --filter @ihms/db studio",
+    "db:seed": "tsx scripts/seed-demo-user.ts && tsx scripts/seed-demo-sinks.ts",
+    "db:seed:user": "tsx scripts/seed-demo-user.ts",
+    "db:seed:sinks": "tsx scripts/seed-demo-sinks.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "postgres": "^3.4.0"
+  },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.10.0",
+    "tsx": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.55.0",

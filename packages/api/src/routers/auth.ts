@@ -7,12 +7,12 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import type { UserRole, AuthTokens, UserProfile } from '@ihms/shared';
+import { jwtConfig } from '../config/jwt';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key-change-in-production';
-const JWT_ACCESS_EXPIRY = process.env.JWT_ACCESS_EXPIRY || '15m';
-const JWT_REFRESH_EXPIRY = process.env.JWT_REFRESH_EXPIRY || '7d';
+const JWT_SECRET = jwtConfig.secret;
+const JWT_REFRESH_SECRET = jwtConfig.refreshSecret;
+const JWT_ACCESS_EXPIRY = jwtConfig.accessExpiry;
+const JWT_REFRESH_EXPIRY = jwtConfig.refreshExpiry;
 const SALT_ROUNDS = 12;
 
 interface TokenPayload {

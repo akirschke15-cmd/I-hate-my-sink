@@ -58,4 +58,3 @@ export const updateMeasurementSchema = measurementSchema.partial().extend({
 });
 
 export type MeasurementInput = z.infer<typeof measurementSchema>;
-export type UpdateMeasurementInput = z.infer<typeof updateMeasurementSchema>;

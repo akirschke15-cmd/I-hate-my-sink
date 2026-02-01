@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { trpc } from '../lib/trpc';
 import { Button, Input } from '../components/ui';
@@ -12,11 +12,10 @@ export function CustomersPage() {
     limit: 50,
   });
 
-  // Simple debounce
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setTimeout(() => setDebouncedSearch(value), 300);
-  };
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,7 +45,7 @@ export function CustomersPage() {
           <Input
             placeholder="Search customers..."
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="max-w-md"
           />
         </div>

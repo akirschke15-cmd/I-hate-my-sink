@@ -21,7 +21,20 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   // CORS
-  CORS_ORIGIN: z.string().default('http://localhost:3010'),
+  CORS_ORIGIN: z.string().refine(
+    (val) => val !== '*' && !val.includes('*'),
+    { message: 'CORS_ORIGIN cannot be a wildcard - specify exact origin(s)' }
+  ).default('http://localhost:3010'),
+
+  // Email (Resend)
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM_ADDRESS: z.string().email().default('quotes@ihms.app'),
+  EMAIL_FROM_NAME: z.string().default('IHMS Quotes'),
+
+  // Workiz Integration
+  WORKIZ_API_KEY: z.string().optional(),
+  WORKIZ_API_URL: z.string().url().default('https://api.workiz.com/api/v1'),
+  WORKIZ_ENABLED: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;
