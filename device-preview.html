@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IHMS - Device Preview</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 10px;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 40px;
+    }
+
+    .devices {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+
+    .device {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .device-label {
+      color: white;
+      font-weight: 600;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+
+    .device-specs {
+      color: #666;
+      font-size: 0.8rem;
+      margin-bottom: 10px;
+    }
+
+    /* iPhone Frame */
+    .iphone-frame {
+      background: #1c1c1e;
+      border-radius: 50px;
+      padding: 15px;
+      box-shadow:
+        0 0 0 3px #3a3a3c,
+        0 25px 50px rgba(0,0,0,0.5);
+    }
+
+    .iphone-frame .notch {
+      width: 150px;
+      height: 30px;
+      background: #1c1c1e;
+      border-radius: 0 0 20px 20px;
+      margin: 0 auto -15px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .iphone-frame .screen {
+      width: 375px;
+      height: 812px;
+      border-radius: 40px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .iphone-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Android Frame */
+    .android-frame {
+      background: #202124;
+      border-radius: 35px;
+      padding: 12px;
+      box-shadow:
+        0 0 0 2px #3c4043,
+        0 25px 50px rgba(0,0,0,0.5);
+    }
+
+    .android-frame .camera {
+      width: 12px;
+      height: 12px;
+      background: #3c4043;
+      border-radius: 50%;
+      margin: 0 auto 8px;
+    }
+
+    .android-frame .screen {
+      width: 360px;
+      height: 780px;
+      border-radius: 25px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .android-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* iPad Frame */
+    .ipad-frame {
+      background: #e4e4e4;
+      border-radius: 25px;
+      padding: 25px;
+      box-shadow:
+        0 0 0 2px #d1d1d1,
+        inset 0 0 0 2px #f5f5f5,
+        0 25px 50px rgba(0,0,0,0.4);
+    }
+
+    .ipad-frame .camera {
+      width: 10px;
+      height: 10px;
+      background: #3a3a3c;
+      border-radius: 50%;
+      margin: 0 auto 15px;
+    }
+
+    .ipad-frame .screen {
+      width: 768px;
+      height: 1024px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: white;
+      border: 1px solid #ccc;
+    }
+
+    .ipad-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Scaled versions for display */
+    .scale-container {
+      transform-origin: top center;
+    }
+
+    .scale-65 {
+      transform: scale(0.65);
+      margin-bottom: -300px;
+    }
+
+    .scale-50 {
+      transform: scale(0.5);
+      margin-bottom: -500px;
+    }
+
+    .controls {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .controls button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 0 5px;
+      transition: background 0.2s;
+    }
+
+    .controls button:hover {
+      background: #2563eb;
+    }
+
+    .controls button.secondary {
+      background: #4b5563;
+    }
+
+    .controls button.secondary:hover {
+      background: #374151;
+    }
+
+    .note {
+      text-align: center;
+      color: #666;
+      font-size: 0.85rem;
+      margin-top: 40px;
+      padding: 20px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @media (max-width: 1200px) {
+      .devices {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>I Hate My Sink - Device Preview</h1>
+  <p class="subtitle">See how your PWA looks across different devices</p>
+
+  <div class="controls">
+    <button onclick="reloadAll()">Reload All</button>
+    <button class="secondary" onclick="navigateTo('/dashboard')">Dashboard</button>
+    <button class="secondary" onclick="navigateTo('/customers')">Customers</button>
+    <button class="secondary" onclick="navigateTo('/sinks')">Sinks</button>
+    <button class="secondary" onclick="navigateTo('/quotes')">Quotes</button>
+    <button class="secondary" onclick="navigateTo('/login')">Login</button>
+  </div>
+
+  <div class="devices">
+    <!-- iPhone 14 Pro -->
+    <div class="device">
+      <div class="device-label">iPhone 14 Pro</div>
+      <div class="device-specs">390 x 844 (scaled 65%)</div>
+      <div class="scale-container scale-65">
+        <div class="iphone-frame">
+          <div class="notch"></div>
+          <div class="screen">
+            <iframe id="iphone" src="http://localhost:3010/dashboard"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Android (Pixel 7) -->
+    <div class="device">
+      <div class="device-label">Android (Pixel 7)</div>
+      <div class="device-specs">412 x 915 (scaled 65%)</div>
+      <div class="scale-container scale-65">
+        <div class="android-frame">
+          <div class="camera"></div>
+          <div class="screen">
+            <iframe id="android" src="http://localhost:3010/dashboard"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- iPad -->
+    <div class="device">
+      <div class="device-label">iPad (10th Gen)</div>
+      <div class="device-specs">820 x 1180 (scaled 50%)</div>
+      <div class="scale-container scale-50">
+        <div class="ipad-frame">
+          <div class="camera"></div>
+          <div class="screen">
+            <iframe id="ipad" src="http://localhost:3010/dashboard"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Note:</strong> These are simulated device frames showing your actual running app.
+    For the most accurate preview, use Chrome DevTools (F12 → Toggle Device Toolbar) or
+    test on real devices. The app is a PWA and can be installed on any device.
+  </div>
+
+  <script>
+    function reloadAll() {
+      document.getElementById('iphone').src = document.getElementById('iphone').src;
+      document.getElementById('android').src = document.getElementById('android').src;
+      document.getElementById('ipad').src = document.getElementById('ipad').src;
+    }
+
+    function navigateTo(path) {
+      const base = 'http://localhost:3010';
+      document.getElementById('iphone').src = base + path;
+      document.getElementById('android').src = base + path;
+      document.getElementById('ipad').src = base + path;
+    }
+  </script>
+</body>
+</html>

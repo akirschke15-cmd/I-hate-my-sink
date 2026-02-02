@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import { appRouter, createContext } from '@ihms/api';
+import { closeDb, checkDbHealth } from '@ihms/db';
 import { env } from './env';
 import { quotesPdfRouter } from './routes/quotes-pdf';
 
@@ -65,12 +66,19 @@ app.use('/trpc', loginLimiter);
 app.use('/trpc', registerLimiter);
 app.use('/trpc', refreshLimiter);
 
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
+// Health check endpoint with database connectivity
+app.get('/health', async (_req, res) => {
+  const dbHealth = await checkDbHealth();
+
+  const status = dbHealth.connected ? 'ok' : 'degraded';
+  const statusCode = dbHealth.connected ? 200 : 503;
+
+  res.status(statusCode).json({
+    status,
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
+    database: dbHealth.connected ? 'connected' : 'disconnected',
+    ...(dbHealth.error && { dbError: dbHealth.error }),
   });
 });
 
@@ -93,11 +101,27 @@ const server = app.listen(env.PORT, () => {
   console.log(`tRPC endpoint: http://localhost:${env.PORT}/trpc`);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down...');
-  server.close(() => {
-    console.log('Server closed');
+// Graceful shutdown - clean up connections properly
+async function gracefulShutdown(signal: string) {
+  console.log(`${signal} received, shutting down gracefully...`);
+
+  // Stop accepting new connections
+  server.close(async () => {
+    console.log('HTTP server closed');
+
+    // Close database connections
+    await closeDb();
+
+    console.log('Graceful shutdown complete');
     process.exit(0);
   });
-});
+
+  // Force shutdown after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

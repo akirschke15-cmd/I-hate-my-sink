@@ -125,8 +125,8 @@ export function EditCustomerPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{error}</div>}
 
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h2 className="mb-4 font-semibold text-gray-900">Contact Information</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Contact Information</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
                 label="First Name"
@@ -155,8 +155,8 @@ export function EditCustomerPage() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h2 className="mb-4 font-semibold text-gray-900">Address</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Address</h2>
             <div className="space-y-4">
               <Input
                 label="Street Address"
@@ -183,8 +183,8 @@ export function EditCustomerPage() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h2 className="mb-4 font-semibold text-gray-900">Notes</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Notes</h2>
             <textarea
               className="block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               rows={4}

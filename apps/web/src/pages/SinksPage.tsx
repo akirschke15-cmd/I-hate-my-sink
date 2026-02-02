@@ -125,7 +125,7 @@ export function SinksPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-6">
         {/* Filters */}
-        <div className="mb-8 overflow-hidden rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
+        <div className="mb-8 overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
           <div className="mb-4 flex items-center gap-2">
             <svg
               className="h-5 w-5 text-primary-600"
@@ -216,7 +216,7 @@ export function SinksPage() {
           </div>
         ) : data?.items.length === 0 ? (
           /* Empty State */
-          <div className="overflow-hidden rounded-2xl border border-primary-100/50 bg-gradient-to-br from-white to-primary-50/30 p-12 text-center shadow-soft-lg">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-primary-50/30 p-12 text-center shadow-soft-lg">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-600 shadow-brand">
               <svg
                 className="h-8 w-8 text-white"
@@ -258,7 +258,7 @@ export function SinksPage() {
             {data?.items.map((sink: Sink) => (
               <div
                 key={sink.id}
-                className="group overflow-hidden rounded-2xl border border-primary-100/50 bg-white shadow-soft transition-all hover:scale-[1.02] hover:shadow-brand"
+                className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-soft transition-all hover:scale-[1.02] hover:border-gray-300 hover:shadow-brand"
               >
                 {/* Sink Image */}
                 <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-primary-50 to-primary-100/50">
@@ -300,7 +300,7 @@ export function SinksPage() {
                   )}
 
                   {/* Specs */}
-                  <div className="space-y-2 rounded-xl bg-gradient-to-br from-primary-50/50 to-transparent p-3">
+                  <div className="space-y-2 rounded-xl border border-gray-100 bg-gradient-to-br from-primary-50/50 to-transparent p-3">
                     <div className="flex items-center gap-2 text-sm">
                       <svg
                         className="h-4 w-4 text-primary-600"

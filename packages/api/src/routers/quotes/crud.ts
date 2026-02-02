@@ -3,19 +3,19 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../../trpc';
 import { db } from '@ihms/db';
 import { quotes, quoteLineItems, customers, measurements } from '@ihms/db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { generateQuoteNumber, calculateLineTotal, recalculateQuoteTotals } from './utils';
 import { createQuoteSchema, updateQuoteSchema, quoteStatuses } from './schemas';
+
+// Default company ID for single-tenant mode
+const DEFAULT_COMPANY_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 export const quotesCrudRouter = router({
   // Create a new quote with line items
   create: protectedProcedure.input(createQuoteSchema).mutation(async ({ ctx, input }) => {
-    // Verify customer belongs to company
+    // Verify customer exists
     const customer = await db.query.customers.findFirst({
-      where: and(
-        eq(customers.id, input.customerId),
-        eq(customers.companyId, ctx.user.companyId)
-      ),
+      where: eq(customers.id, input.customerId),
     });
 
     if (!customer) {
@@ -28,10 +28,7 @@ export const quotesCrudRouter = router({
     // Verify measurement if provided
     if (input.measurementId) {
       const measurement = await db.query.measurements.findFirst({
-        where: and(
-          eq(measurements.id, input.measurementId),
-          eq(measurements.companyId, ctx.user.companyId)
-        ),
+        where: eq(measurements.id, input.measurementId),
       });
 
       if (!measurement) {
@@ -65,7 +62,7 @@ export const quotesCrudRouter = router({
     const [quote] = await db
       .insert(quotes)
       .values({
-        companyId: ctx.user.companyId,
+        companyId: DEFAULT_COMPANY_ID,
         customerId: input.customerId,
         measurementId: input.measurementId,
         createdById: ctx.user.userId,
@@ -115,12 +112,8 @@ export const quotesCrudRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ ctx, input }) => {
-      const conditions = [eq(quotes.companyId, ctx.user.companyId)];
-
-      if (input.status) {
-        conditions.push(eq(quotes.status, input.status));
-      }
+    .query(async ({ input }) => {
+      const whereClause = input.status ? eq(quotes.status, input.status) : undefined;
 
       const results = await db
         .select({
@@ -136,7 +129,7 @@ export const quotesCrudRouter = router({
         })
         .from(quotes)
         .innerJoin(customers, eq(quotes.customerId, customers.id))
-        .where(and(...conditions))
+        .where(whereClause)
         .orderBy(desc(quotes.createdAt))
         .limit(input.limit)
         .offset(input.offset);
@@ -144,7 +137,7 @@ export const quotesCrudRouter = router({
       const countResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(quotes)
-        .where(and(...conditions));
+        .where(whereClause);
 
       const total = Number(countResult[0]?.count ?? 0);
 
@@ -164,13 +157,10 @@ export const quotesCrudRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ ctx, input }) => {
-      // Verify customer belongs to company
+    .query(async ({ input }) => {
+      // Verify customer exists
       const customer = await db.query.customers.findFirst({
-        where: and(
-          eq(customers.id, input.customerId),
-          eq(customers.companyId, ctx.user.companyId)
-        ),
+        where: eq(customers.id, input.customerId),
       });
 
       if (!customer) {
@@ -193,12 +183,9 @@ export const quotesCrudRouter = router({
   // Get single quote with line items
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       const quote = await db.query.quotes.findFirst({
-        where: and(
-          eq(quotes.id, input.id),
-          eq(quotes.companyId, ctx.user.companyId)
-        ),
+        where: eq(quotes.id, input.id),
       });
 
       if (!quote) {
@@ -249,14 +236,11 @@ export const quotesCrudRouter = router({
     }),
 
   // Update quote details
-  update: protectedProcedure.input(updateQuoteSchema).mutation(async ({ ctx, input }) => {
+  update: protectedProcedure.input(updateQuoteSchema).mutation(async ({ input }) => {
     const { id, ...updateData } = input;
 
     const existing = await db.query.quotes.findFirst({
-      where: and(
-        eq(quotes.id, id),
-        eq(quotes.companyId, ctx.user.companyId)
-      ),
+      where: eq(quotes.id, id),
     });
 
     if (!existing) {
@@ -307,12 +291,9 @@ export const quotesCrudRouter = router({
         status: z.enum(quoteStatuses),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const existing = await db.query.quotes.findFirst({
-        where: and(
-          eq(quotes.id, input.id),
-          eq(quotes.companyId, ctx.user.companyId)
-        ),
+        where: eq(quotes.id, input.id),
       });
 
       if (!existing) {
@@ -337,12 +318,9 @@ export const quotesCrudRouter = router({
   // Delete quote
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const existing = await db.query.quotes.findFirst({
-        where: and(
-          eq(quotes.id, input.id),
-          eq(quotes.companyId, ctx.user.companyId)
-        ),
+        where: eq(quotes.id, input.id),
       });
 
       if (!existing) {
@@ -366,12 +344,9 @@ export const quotesCrudRouter = router({
         signatureDataUrl: z.string().min(1),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const existing = await db.query.quotes.findFirst({
-        where: and(
-          eq(quotes.id, input.id),
-          eq(quotes.companyId, ctx.user.companyId)
-        ),
+        where: eq(quotes.id, input.id),
       });
 
       if (!existing) {

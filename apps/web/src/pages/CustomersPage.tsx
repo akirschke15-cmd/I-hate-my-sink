@@ -71,7 +71,7 @@ export function CustomersPage() {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
           </div>
         ) : customers?.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 text-center shadow-soft">
+          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-soft">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center shadow-md">
               <svg
                 className="h-8 w-8 text-primary-600"
@@ -102,7 +102,7 @@ export function CustomersPage() {
                 <Link
                   key={customer.id}
                   to={`/customers/${customer.id}`}
-                  className="group relative overflow-hidden rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft transition-all hover:shadow-brand hover:scale-[1.02]"
+                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft transition-all hover:border-gray-300 hover:shadow-brand hover:scale-[1.02]"
                 >
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-sm font-semibold text-white shadow-md">
@@ -144,7 +144,7 @@ export function CustomersPage() {
                     </svg>
                   </div>
                   {customer.address && (customer.address.city || customer.address.state) && (
-                    <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary-50 px-3 py-2 text-sm text-primary-700">
+                    <div className="mt-4 flex items-center gap-2 rounded-lg border border-primary-100 bg-primary-50 px-3 py-2 text-sm text-primary-700">
                       <svg className="h-4 w-4 text-primary-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />

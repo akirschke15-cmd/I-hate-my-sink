@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../../trpc';
 import { db } from '@ihms/db';
 import { quotes, quoteLineItems, customers, companies } from '@ihms/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createWorkizJob, isWorkizConfigured } from '../../services/workiz';
 import { isEmailConfigured } from '../../services/email';
 
@@ -17,10 +17,10 @@ export const quotesIntegrationsRouter = router({
   // Create Workiz job from accepted quote
   createWorkizJob: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       // Fetch quote
       const quote = await db.query.quotes.findFirst({
-        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
+        where: eq(quotes.id, input.id),
       });
 
       if (!quote) {

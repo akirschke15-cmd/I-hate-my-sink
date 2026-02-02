@@ -9,12 +9,9 @@ import { addLineItemSchema, updateLineItemSchema } from './schemas';
 
 export const quotesLineItemsRouter = router({
   // Add line item to quote
-  addLineItem: protectedProcedure.input(addLineItemSchema).mutation(async ({ ctx, input }) => {
+  addLineItem: protectedProcedure.input(addLineItemSchema).mutation(async ({ input }) => {
     const quote = await db.query.quotes.findFirst({
-      where: and(
-        eq(quotes.id, input.quoteId),
-        eq(quotes.companyId, ctx.user.companyId)
-      ),
+      where: eq(quotes.id, input.quoteId),
     });
 
     if (!quote) {
@@ -60,15 +57,12 @@ export const quotesLineItemsRouter = router({
   }),
 
   // Update line item
-  updateLineItem: protectedProcedure.input(updateLineItemSchema).mutation(async ({ ctx, input }) => {
+  updateLineItem: protectedProcedure.input(updateLineItemSchema).mutation(async ({ input }) => {
     const { id, quoteId, ...updateData } = input;
 
-    // Verify quote belongs to company
+    // Verify quote exists
     const quote = await db.query.quotes.findFirst({
-      where: and(
-        eq(quotes.id, quoteId),
-        eq(quotes.companyId, ctx.user.companyId)
-      ),
+      where: eq(quotes.id, quoteId),
     });
 
     if (!quote) {
@@ -126,13 +120,10 @@ export const quotesLineItemsRouter = router({
   // Delete line item
   deleteLineItem: protectedProcedure
     .input(z.object({ id: z.string().uuid(), quoteId: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      // Verify quote belongs to company
+    .mutation(async ({ input }) => {
+      // Verify quote exists
       const quote = await db.query.quotes.findFirst({
-        where: and(
-          eq(quotes.id, input.quoteId),
-          eq(quotes.companyId, ctx.user.companyId)
-        ),
+        where: eq(quotes.id, input.quoteId),
       });
 
       if (!quote) {

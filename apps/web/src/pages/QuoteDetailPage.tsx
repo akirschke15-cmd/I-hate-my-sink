@@ -88,6 +88,8 @@ export function QuoteDetailPage() {
 
   const deleteQuote = trpc.quote.delete.useMutation({
     onSuccess: () => {
+      // Invalidate the quotes list so it refetches
+      utils.quote.list.invalidate();
       navigate('/quotes');
     },
   });
@@ -402,8 +404,8 @@ export function QuoteDetailPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Quote Info */}
           <div className="lg:col-span-1">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="mb-4 font-semibold text-gray-900">Quote Information</h2>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Quote Information</h2>
               <dl className="space-y-3">
                 <div>
                   <dt className="text-sm text-gray-500">Customer</dt>
@@ -486,8 +488,8 @@ export function QuoteDetailPage() {
 
             {/* Signature Card */}
             {quote.signatureUrl && (
-              <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
-                <h2 className="mb-4 font-semibold text-gray-900">Customer Signature</h2>
+              <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Customer Signature</h2>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-2">
                   <img
                     src={quote.signatureUrl}
@@ -502,8 +504,8 @@ export function QuoteDetailPage() {
             )}
 
             {/* Totals Card */}
-            <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="mb-4 font-semibold text-gray-900">Summary</h2>
+            <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Summary</h2>
               <div className="space-y-2">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
@@ -529,8 +531,8 @@ export function QuoteDetailPage() {
 
           {/* Line Items */}
           <div className="lg:col-span-2">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
                 <h2 className="font-semibold text-gray-900">Line Items</h2>
                 {quote.status === 'draft' && (
                   <Button size="sm" variant="secondary" onClick={() => setShowAddItem(true)}>

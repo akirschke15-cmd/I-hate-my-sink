@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { trpc } from '../lib/trpc';
 import { Button, Input, Select } from '../components/ui';
@@ -23,21 +23,23 @@ const mountingStyles = [
   { value: 'flush_mount', label: 'Flush Mount' },
 ];
 
-export function NewMeasurementPage() {
-  const { id: customerId } = useParams<{ id: string }>();
+export function EditMeasurementPage() {
+  const { id: measurementId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
 
-  const { data: customer, isLoading: customerLoading } = trpc.customer.get.useQuery(
-    { id: customerId! },
-    { enabled: !!customerId }
+  const { data: measurement, isLoading: measurementLoading } = trpc.measurement.get.useQuery(
+    { id: measurementId! },
+    { enabled: !!measurementId }
   );
 
-  const createMeasurement = trpc.measurement.create.useMutation({
+  const updateMeasurement = trpc.measurement.update.useMutation({
     onSuccess: async () => {
-      // Invalidate the measurements list so it refetches on the customer page
-      await utils.measurement.listByCustomer.invalidate({ customerId: customerId! });
-      navigate(`/customers/${customerId}`);
+      if (measurement) {
+        await utils.measurement.listByCustomer.invalidate({ customerId: measurement.customerId });
+        await utils.measurement.get.invalidate({ id: measurementId! });
+      }
+      navigate(`/customers/${measurement?.customerId}`);
     },
   });
 
@@ -65,6 +67,34 @@ export function NewMeasurementPage() {
   });
   const [error, setError] = useState('');
 
+  // Populate form with existing measurement data
+  useEffect(() => {
+    if (measurement) {
+      setFormData({
+        location: measurement.location || '',
+        cabinetWidthInches: measurement.cabinetWidthInches || '',
+        cabinetDepthInches: measurement.cabinetDepthInches || '',
+        cabinetHeightInches: measurement.cabinetHeightInches || '',
+        countertopMaterial: measurement.countertopMaterial || '',
+        countertopThicknessInches: measurement.countertopThicknessInches || '',
+        countertopOverhangFrontInches: measurement.countertopOverhangFrontInches || '',
+        countertopOverhangSidesInches: measurement.countertopOverhangSidesInches || '',
+        mountingStyle: measurement.mountingStyle || '',
+        faucetHoleCount: measurement.faucetHoleCount?.toString() || '',
+        faucetHoleSpacing: measurement.faucetHoleSpacing || '',
+        existingSinkWidthInches: measurement.existingSinkWidthInches || '',
+        existingSinkDepthInches: measurement.existingSinkDepthInches || '',
+        existingSinkBowlCount: measurement.existingSinkBowlCount?.toString() || '',
+        backsplashHeightInches: measurement.backsplashHeightInches || '',
+        windowClearanceInches: measurement.windowClearanceInches || '',
+        plumbingCenterlineFromLeft: measurement.plumbingCenterlineFromLeft || '',
+        garbageDisposal: measurement.garbageDisposal || false,
+        dishwasherAirGap: measurement.dishwasherAirGap || false,
+        notes: measurement.notes || '',
+      });
+    }
+  }, [measurement]);
+
   const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -74,8 +104,8 @@ export function NewMeasurementPage() {
     setError('');
 
     try {
-      await createMeasurement.mutateAsync({
-        customerId: customerId!,
+      await updateMeasurement.mutateAsync({
+        id: measurementId!,
         location: formData.location || undefined,
         cabinetWidthInches: parseFloat(formData.cabinetWidthInches),
         cabinetDepthInches: parseFloat(formData.cabinetDepthInches),
@@ -121,12 +151,12 @@ export function NewMeasurementPage() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Failed to save measurement');
+        setError('Failed to update measurement');
       }
     }
   };
 
-  if (customerLoading) {
+  if (measurementLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
@@ -134,10 +164,10 @@ export function NewMeasurementPage() {
     );
   }
 
-  if (!customer) {
+  if (!measurement) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center">
-        <p className="text-gray-500">Customer not found</p>
+        <p className="text-gray-500">Measurement not found</p>
         <Link to="/customers" className="mt-4">
           <Button>Back to Customers</Button>
         </Link>
@@ -149,7 +179,7 @@ export function NewMeasurementPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4">
-          <Link to={`/customers/${customerId}`} className="text-gray-500 hover:text-gray-700">
+          <Link to={`/customers/${measurement.customerId}`} className="text-gray-500 hover:text-gray-700">
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -160,9 +190,9 @@ export function NewMeasurementPage() {
             </svg>
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">New Measurement</h1>
+            <h1 className="text-xl font-bold text-gray-900">Edit Measurement</h1>
             <p className="text-sm text-gray-500">
-              {customer.firstName} {customer.lastName}
+              {measurement.location || 'No location specified'}
             </p>
           </div>
         </div>
@@ -378,13 +408,13 @@ export function NewMeasurementPage() {
           </div>
 
           <div className="flex gap-3">
-            <Link to={`/customers/${customerId}`} className="flex-1">
+            <Link to={`/customers/${measurement.customerId}`} className="flex-1">
               <Button type="button" variant="secondary" className="w-full">
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" className="flex-1" isLoading={createMeasurement.isPending}>
-              Save Measurement
+            <Button type="submit" className="flex-1" isLoading={updateMeasurement.isPending}>
+              Save Changes
             </Button>
           </div>
         </form>

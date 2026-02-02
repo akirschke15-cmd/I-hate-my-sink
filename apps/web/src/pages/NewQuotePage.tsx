@@ -33,6 +33,7 @@ interface Customer {
 
 export function NewQuotePage() {
   const navigate = useNavigate();
+  const utils = trpc.useUtils();
   const [searchParams] = useSearchParams();
   const measurementId = searchParams.get('measurementId') || undefined;
   const sinkId = searchParams.get('sinkId') || undefined;
@@ -72,6 +73,8 @@ export function NewQuotePage() {
   // Create quote mutation
   const createQuote = trpc.quote.create.useMutation({
     onSuccess: (quote: { id: string } | undefined) => {
+      // Invalidate the quotes list so it refetches
+      utils.quote.list.invalidate();
       if (quote) {
         navigate(`/quotes/${quote.id}`);
       }

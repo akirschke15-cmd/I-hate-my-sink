@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../../trpc';
 import { db } from '@ihms/db';
 import { quotes, users } from '@ihms/db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { and, gte, lte, sql } from 'drizzle-orm';
 
 export const quotesAnalyticsRouter = router({
   // Get analytics summary
@@ -13,8 +13,8 @@ export const quotesAnalyticsRouter = router({
         endDate: z.string().datetime().optional(),
       })
     )
-    .query(async ({ ctx, input }) => {
-      const conditions = [eq(quotes.companyId, ctx.user.companyId)];
+    .query(async ({ input }) => {
+      const conditions: ReturnType<typeof gte>[] = [];
 
       if (input.startDate) {
         conditions.push(gte(quotes.createdAt, new Date(input.startDate)));
@@ -33,7 +33,7 @@ export const quotesAnalyticsRouter = router({
           signedAt: quotes.signedAt,
         })
         .from(quotes)
-        .where(and(...conditions));
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
 
       // Calculate counts by status
       const byStatus = {
@@ -94,7 +94,7 @@ export const quotesAnalyticsRouter = router({
         groupBy: z.enum(['day', 'week', 'month']).default('day'),
       })
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       const allQuotes = await db
         .select({
           status: quotes.status,
@@ -104,7 +104,6 @@ export const quotesAnalyticsRouter = router({
         .from(quotes)
         .where(
           and(
-            eq(quotes.companyId, ctx.user.companyId),
             gte(quotes.createdAt, new Date(input.startDate)),
             lte(quotes.createdAt, new Date(input.endDate))
           )
@@ -160,8 +159,8 @@ export const quotesAnalyticsRouter = router({
         endDate: z.string().datetime().optional(),
       })
     )
-    .query(async ({ ctx, input }) => {
-      const conditions = [eq(quotes.companyId, ctx.user.companyId)];
+    .query(async ({ input }) => {
+      const conditions: ReturnType<typeof gte>[] = [];
 
       if (input.startDate) {
         conditions.push(gte(quotes.createdAt, new Date(input.startDate)));
@@ -180,7 +179,7 @@ export const quotesAnalyticsRouter = router({
           signedAt: quotes.signedAt,
         })
         .from(quotes)
-        .where(and(...conditions));
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
 
       // Get user info
       const userIds = [...new Set(quotesWithCreator.map((q) => q.createdById))];
@@ -191,12 +190,7 @@ export const quotesAnalyticsRouter = router({
           lastName: users.lastName,
         })
         .from(users)
-        .where(
-          and(
-            eq(users.companyId, ctx.user.companyId),
-            userIds.length > 0 ? sql`${users.id} IN ${userIds}` : sql`1=0`
-          )
-        );
+        .where(userIds.length > 0 ? sql`${users.id} IN ${userIds}` : sql`1=0`);
 
       const userMap = new Map(usersData.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
 

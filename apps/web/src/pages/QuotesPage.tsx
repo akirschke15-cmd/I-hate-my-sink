@@ -113,7 +113,7 @@ export function QuotesPage() {
             />
           </div>
           {data && (
-            <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-soft border border-primary-100/50">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-soft">
               <svg className="h-4 w-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -170,9 +170,9 @@ export function QuotesPage() {
           </div>
         ) : (
           /* Quotes Table */
-          <div className="overflow-hidden rounded-2xl border border-primary-100/50 bg-white shadow-soft-lg">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-soft-lg">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-primary-50 to-primary-100/50">
+              <thead className="border-b border-gray-200 bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-primary-700">
                     Quote #
@@ -199,7 +199,7 @@ export function QuotesPage() {
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {data?.items.map((quote: QuoteListItem) => (
-                  <tr key={quote.id} className="transition-colors hover:bg-primary-50/30">
+                  <tr key={quote.id} className="transition-colors hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4">
                       <Link
                         to={`/quotes/${quote.id}`}

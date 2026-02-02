@@ -1,2 +1,2 @@
-export { db, createMigrationClient, type Database } from './client';
+export { db, createMigrationClient, closeDb, checkDbHealth, type Database } from './client';
 export * from './schema';

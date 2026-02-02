@@ -7,6 +7,7 @@ import { NewCustomerPage } from './pages/NewCustomerPage';
 import { CustomerDetailPage } from './pages/CustomerDetailPage';
 import { EditCustomerPage } from './pages/EditCustomerPage';
 import { NewMeasurementPage } from './pages/NewMeasurementPage';
+import { EditMeasurementPage } from './pages/EditMeasurementPage';
 import { SinksPage } from './pages/SinksPage';
 import { SinkMatchPage } from './pages/SinkMatchPage';
 import { QuotesPage } from './pages/QuotesPage';
@@ -81,6 +82,14 @@ function App() {
         element={
           <ProtectedRoute>
             <NewMeasurementPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/measurements/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditMeasurementPage />
           </ProtectedRoute>
         }
       />

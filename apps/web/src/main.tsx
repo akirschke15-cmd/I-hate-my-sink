@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { trpc, createTRPCClient } from './lib/trpc';
+import { trpc, createTRPCClient, isUnauthorizedError, clearAuthAndRedirect } from './lib/trpc';
 import { AuthProvider } from './contexts/AuthContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -18,11 +18,19 @@ function Root() {
           queries: {
             staleTime: 1000 * 60 * 5, // 5 minutes
             retry: (failureCount, error) => {
-              // Don't retry on 4xx errors
-              if (error instanceof Error && error.message.includes('UNAUTHORIZED')) {
+              // Don't retry on UNAUTHORIZED - redirect to login instead
+              if (isUnauthorizedError(error)) {
                 return false;
               }
               return failureCount < 3;
+            },
+          },
+          mutations: {
+            retry: (failureCount, error) => {
+              if (isUnauthorizedError(error)) {
+                return false;
+              }
+              return failureCount < 1;
             },
           },
         },
@@ -30,6 +38,19 @@ function Root() {
   );
 
   const [trpcClient] = useState(() => createTRPCClient());
+
+  // Global error handler for UNAUTHORIZED errors
+  useEffect(() => {
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated' && event.query.state.status === 'error') {
+        const error = event.query.state.error;
+        if (isUnauthorizedError(error)) {
+          clearAuthAndRedirect();
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [queryClient]);
 
   return (
     <ErrorBoundary>

@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../../trpc';
 import { db } from '@ihms/db';
 import { quotes, quoteLineItems, customers, companies, emailLogs } from '@ihms/db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { sendEmail, isEmailConfigured } from '../../services/email';
 import { generateQuoteEmailSubject, generateQuoteEmailHtml } from '../../services/email-templates';
 import { generateQuotePdfBuffer } from '../../services/quote-pdf';
@@ -27,9 +27,9 @@ export const quotesEmailRouter = router({
         });
       }
 
-      // Fetch quote with ownership check
+      // Fetch quote
       const quote = await db.query.quotes.findFirst({
-        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
+        where: eq(quotes.id, input.id),
       });
 
       if (!quote) {
@@ -140,10 +140,10 @@ export const quotesEmailRouter = router({
   // Get email history for a quote
   getEmailHistory: protectedProcedure
     .input(z.object({ quoteId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      // Verify quote belongs to company
+    .query(async ({ input }) => {
+      // Verify quote exists
       const quote = await db.query.quotes.findFirst({
-        where: and(eq(quotes.id, input.quoteId), eq(quotes.companyId, ctx.user.companyId)),
+        where: eq(quotes.id, input.quoteId),
       });
 
       if (!quote) {

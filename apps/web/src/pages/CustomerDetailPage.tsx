@@ -17,6 +17,8 @@ export function CustomerDetailPage() {
 
   const deleteCustomer = trpc.customer.delete.useMutation({
     onSuccess: () => {
+      // Invalidate the customers list so it refetches
+      utils.customer.list.invalidate();
       navigate('/customers');
     },
   });
@@ -93,8 +95,8 @@ export function CustomerDetailPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Customer Info */}
           <div className="lg:col-span-1">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="mb-4 font-semibold text-gray-900">Contact Information</h2>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Contact Information</h2>
               <dl className="space-y-3">
                 {customer.email && (
                   <div>
@@ -147,7 +149,7 @@ export function CustomerDetailPage() {
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
               </div>
             ) : measurements?.length === 0 ? (
-              <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+              <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
                 <svg
                   className="mx-auto h-12 w-12 text-gray-400"
                   fill="none"
@@ -172,7 +174,7 @@ export function CustomerDetailPage() {
             ) : (
               <div className="space-y-4">
                 {measurements?.map((measurement: { id: string; location?: string | null; createdAt: string | Date; cabinetWidthInches: string; cabinetDepthInches: string; cabinetHeightInches: string; countertopMaterial?: string | null; countertopThicknessInches?: string | null; notes?: string | null }) => (
-                  <div key={measurement.id} className="rounded-xl bg-white p-6 shadow-sm">
+                  <div key={measurement.id} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
@@ -183,7 +185,7 @@ export function CustomerDetailPage() {
                             {new Date(measurement.createdAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
+                        <div className="mt-3 grid grid-cols-3 gap-4 border-t border-gray-100 pt-3 text-sm">
                           <div>
                             <span className="text-gray-500">Cabinet: </span>
                             <span className="text-gray-900">
@@ -215,6 +217,9 @@ export function CustomerDetailPage() {
                       <div className="flex gap-2">
                         <Link to={`/measurements/${measurement.id}/match`}>
                           <Button size="sm">Find Sinks</Button>
+                        </Link>
+                        <Link to={`/measurements/${measurement.id}/edit`}>
+                          <Button size="sm" variant="secondary">Edit</Button>
                         </Link>
                         <button
                           onClick={() => handleDeleteMeasurement(measurement.id)}

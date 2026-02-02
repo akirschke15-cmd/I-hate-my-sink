@@ -109,7 +109,7 @@ export function AnalyticsPage() {
         {/* Summary Cards */}
         <div className="mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {/* Total Quotes Card */}
-          <div className="group relative overflow-hidden rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
+          <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary-500 opacity-10 blur-2xl"></div>
             <div className="relative">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-md">
@@ -132,7 +132,7 @@ export function AnalyticsPage() {
           </div>
 
           {/* Conversion Rate Card */}
-          <div className="group relative overflow-hidden rounded-2xl border border-green-100/50 bg-white p-6 shadow-soft-lg">
+          <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-green-500 opacity-10 blur-2xl"></div>
             <div className="relative">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-md">
@@ -157,7 +157,7 @@ export function AnalyticsPage() {
           </div>
 
           {/* Total Value Card */}
-          <div className="group relative overflow-hidden rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
+          <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary-500 opacity-10 blur-2xl"></div>
             <div className="relative">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-md">
@@ -180,7 +180,7 @@ export function AnalyticsPage() {
           </div>
 
           {/* Avg Days to Close Card */}
-          <div className="group relative overflow-hidden rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
+          <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary-500 opacity-10 blur-2xl"></div>
             <div className="relative">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-md">
@@ -205,8 +205,8 @@ export function AnalyticsPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Status Breakdown */}
-          <div className="rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
-            <h2 className="mb-6 text-lg font-semibold text-gray-900">Status Breakdown</h2>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
+            <h2 className="mb-6 border-b border-gray-200 pb-3 text-lg font-semibold text-gray-900">Status Breakdown</h2>
             {analyticsLoading ? (
               <div className="space-y-4">
                 {[...Array(6)].map((_, i) => (
@@ -253,8 +253,8 @@ export function AnalyticsPage() {
           </div>
 
           {/* Trend Chart */}
-          <div className="rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
               <h2 className="text-lg font-semibold text-gray-900">Quotes Over Time</h2>
               <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-1.5">
@@ -326,8 +326,8 @@ export function AnalyticsPage() {
         </div>
 
         {/* Rep Performance */}
-        <div className="mt-6 rounded-2xl border border-primary-100/50 bg-white shadow-soft-lg">
-          <div className="border-b border-gray-100 px-6 py-4">
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-soft-lg">
+          <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
             <h2 className="text-lg font-semibold text-gray-900">Sales Rep Performance</h2>
           </div>
           {repsLoading ? (
@@ -340,7 +340,7 @@ export function AnalyticsPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Name
                     </th>
@@ -361,9 +361,9 @@ export function AnalyticsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-200">
                   {repPerformance.map((rep: RepPerformance) => (
-                    <tr key={rep.userId} className="transition-colors hover:bg-gray-50/50">
+                    <tr key={rep.userId} className="transition-colors hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
@@ -411,7 +411,7 @@ export function AnalyticsPage() {
 
         {/* Additional Metrics */}
         <div className="mt-6 grid gap-6 sm:grid-cols-3">
-          <div className="group relative overflow-hidden rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
+          <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary-500 opacity-10 blur-2xl"></div>
             <div className="relative">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50">
@@ -428,7 +428,7 @@ export function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl border border-green-100/50 bg-white p-6 shadow-soft-lg">
+          <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-green-500 opacity-10 blur-2xl"></div>
             <div className="relative">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
@@ -445,7 +445,7 @@ export function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl border border-primary-100/50 bg-white p-6 shadow-soft-lg">
+          <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-soft-lg">
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary-500 opacity-10 blur-2xl"></div>
             <div className="relative">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50">
