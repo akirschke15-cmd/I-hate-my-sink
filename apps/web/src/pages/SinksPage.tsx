@@ -66,7 +66,7 @@ export function SinksPage() {
 
   const [sortBy, sortOrder] = sortValue.split('-') as [SortBy, SortOrder];
 
-  const { data, isLoading, error } = trpc.sink.list.useQuery({
+  const { data, isLoading, isError, error } = trpc.sink.list.useQuery({
     material: material || undefined,
     mountingStyle: mountingStyle || undefined,
     bowlCount: bowlCount ? parseInt(bowlCount) : undefined,
@@ -203,9 +203,10 @@ export function SinksPage() {
         )}
 
         {/* Error State */}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-            <p className="text-red-700">Failed to load sinks. Please try again.</p>
+        {isError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            <p className="font-medium">Failed to load sinks</p>
+            <p className="text-sm">{error?.message || 'Please try again later'}</p>
           </div>
         )}
 

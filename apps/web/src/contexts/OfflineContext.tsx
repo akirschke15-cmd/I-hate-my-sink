@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { getPendingSyncs, removePendingSync } from '../lib/offline-store';
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from '@ihms/api';
+import { getPendingSyncs, removePendingSync, saveCustomer, saveMeasurement } from '../lib/offline-store';
 import type { PendingSync } from '@ihms/shared';
 
 interface OfflineContextType {
@@ -87,41 +89,140 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   );
 }
 
-async function processSyncItem(item: PendingSync<unknown>): Promise<void> {
-  // TODO: Implement actual sync with tRPC mutations
-  // This is currently a DEMO/PLACEHOLDER implementation
-  //
-  // Real implementation would:
-  // 1. Get the tRPC client instance
-  // 2. Call appropriate mutation based on item.entity and item.type
-  // 3. Handle errors and retries
-  //
-  // Example:
-  // switch (item.entity) {
-  //   case 'customer':
-  //     if (item.type === 'create') await trpc.customer.create.mutate(item.data);
-  //     else if (item.type === 'update') await trpc.customer.update.mutate(item.data);
-  //     break;
-  //   case 'measurement':
-  //     if (item.type === 'create') await trpc.measurement.create.mutate(item.data);
-  //     else if (item.type === 'update') await trpc.measurement.update.mutate(item.data);
-  //     break;
-  //   case 'quote':
-  //     if (item.type === 'create') await trpc.quote.create.mutate(item.data);
-  //     else if (item.type === 'update') await trpc.quote.update.mutate(item.data);
-  //     break;
-  // }
+/**
+ * Create a standalone tRPC client for use outside React hooks.
+ * This client is used for offline sync operations where we can't use
+ * React hooks. It uses the same authentication mechanism as the main
+ * React client (accessing localStorage directly).
+ */
+function createStandaloneTRPCClient() {
+  return createTRPCProxyClient<AppRouter>({
+    links: [
+      httpBatchLink({
+        url: '/trpc',
+        headers() {
+          const token = localStorage.getItem('accessToken');
+          return token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : {};
+        },
+      }),
+    ],
+  });
+}
 
-  console.log('[OfflineSync] Demo mode - would sync:', {
+/**
+ * Process a single pending sync item by calling the appropriate tRPC mutation.
+ * This function handles creating and updating entities on the server, and
+ * updates the local IndexedDB cache with server-generated IDs after successful sync.
+ *
+ * @param item - The pending sync item containing entity type, operation, and data
+ * @throws Error if sync fails - the error is re-thrown to keep the item in the queue
+ */
+async function processSyncItem(item: PendingSync<unknown>): Promise<void> {
+  const client = createStandaloneTRPCClient();
+
+  console.log('[OfflineSync] Syncing:', {
     id: item.id,
     entity: item.entity,
     type: item.type,
-    createdAt: item.createdAt,
     retryCount: item.retryCount,
   });
 
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  try {
+    switch (item.entity) {
+      case 'customer': {
+        if (item.type === 'create') {
+          // Create customer on server
+          const result = await client.customer.create.mutate(item.data as any);
+
+          // Update IndexedDB with server ID
+          const localRecord = item.data as any;
+          if (localRecord.id && result.id) {
+            await saveCustomer({
+              ...localRecord,
+              id: result.id, // Replace local ID with server ID
+              syncedAt: new Date(),
+            });
+          }
+
+          console.log('[OfflineSync] Customer created:', result.id);
+        } else if (item.type === 'update') {
+          const result = await client.customer.update.mutate(item.data as any);
+
+          // Update IndexedDB sync timestamp
+          const localRecord = item.data as any;
+          if (localRecord.id) {
+            await saveCustomer({
+              ...localRecord,
+              syncedAt: new Date(),
+            });
+          }
+
+          console.log('[OfflineSync] Customer updated:', result.id);
+        }
+        break;
+      }
+
+      case 'measurement': {
+        if (item.type === 'create') {
+          // Create measurement on server
+          const result = await client.measurement.create.mutate(item.data as any);
+
+          // Update IndexedDB with server ID
+          const localRecord = item.data as any;
+          if (localRecord.id && result.id) {
+            await saveMeasurement({
+              ...localRecord,
+              id: result.id, // Replace local ID with server ID
+              syncedAt: new Date(),
+            });
+          }
+
+          console.log('[OfflineSync] Measurement created:', result.id);
+        } else if (item.type === 'update') {
+          const result = await client.measurement.update.mutate(item.data as any);
+
+          // Update IndexedDB sync timestamp
+          const localRecord = item.data as any;
+          if (localRecord.id) {
+            await saveMeasurement({
+              ...localRecord,
+              syncedAt: new Date(),
+            });
+          }
+
+          console.log('[OfflineSync] Measurement updated:', result.id);
+        }
+        break;
+      }
+
+      case 'quote': {
+        if (item.type === 'create') {
+          // Create quote on server
+          const result = await client.quote.create.mutate(item.data as any);
+
+          // Note: Quote IndexedDB storage not yet implemented in offline-store.ts
+          // This will be added when quote offline support is implemented
+
+          console.log('[OfflineSync] Quote created:', result.id);
+        } else if (item.type === 'update') {
+          const result = await client.quote.update.mutate(item.data as any);
+
+          console.log('[OfflineSync] Quote updated:', result.id);
+        }
+        break;
+      }
+
+      default:
+        console.warn('[OfflineSync] Unknown entity type:', item.entity);
+    }
+  } catch (error) {
+    console.error('[OfflineSync] Sync failed:', error);
+    throw error; // Re-throw to keep item in queue for retry
+  }
 }
 
 export function useOffline() {

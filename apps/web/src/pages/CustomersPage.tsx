@@ -7,7 +7,7 @@ export function CustomersPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const { data: customers, isLoading } = trpc.customer.list.useQuery({
+  const { data: customers, isLoading, isError, error } = trpc.customer.list.useQuery({
     search: debouncedSearch || undefined,
     limit: 50,
   });
@@ -66,7 +66,12 @@ export function CustomersPage() {
           />
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            <p className="font-medium">Failed to load customers</p>
+            <p className="text-sm">{error?.message || 'Please try again later'}</p>
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
           </div>

@@ -7,12 +7,12 @@ export function CustomerDetailPage() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
 
-  const { data: customer, isLoading: customerLoading } = trpc.customer.get.useQuery(
+  const { data: customer, isLoading: customerLoading, isError: customerError, error: customerErrorMsg } = trpc.customer.get.useQuery(
     { id: id! },
     { enabled: !!id }
   );
 
-  const { data: measurements, isLoading: measurementsLoading } =
+  const { data: measurements, isLoading: measurementsLoading, isError: measurementsError, error: measurementsErrorMsg } =
     trpc.measurement.listByCustomer.useQuery({ customerId: id! }, { enabled: !!id });
 
   const deleteCustomer = trpc.customer.delete.useMutation({
@@ -41,6 +41,20 @@ export function CustomerDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (customerError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 max-w-md w-full">
+          <p className="font-medium">Failed to load customer</p>
+          <p className="text-sm">{customerErrorMsg?.message || 'Please try again later'}</p>
+        </div>
+        <Link to="/customers" className="mt-4">
+          <Button>Back to Customers</Button>
+        </Link>
       </div>
     );
   }
@@ -144,7 +158,12 @@ export function CustomerDetailPage() {
               </Link>
             </div>
 
-            {measurementsLoading ? (
+            {measurementsError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                <p className="font-medium">Failed to load measurements</p>
+                <p className="text-sm">{measurementsErrorMsg?.message || 'Please try again later'}</p>
+              </div>
+            ) : measurementsLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
               </div>

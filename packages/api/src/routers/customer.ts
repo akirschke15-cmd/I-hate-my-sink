@@ -3,11 +3,8 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc';
 import { db } from '@ihms/db';
 import { customers } from '@ihms/db/schema';
-import { eq, ilike, or, desc } from 'drizzle-orm';
+import { eq, ilike, or, desc, and } from 'drizzle-orm';
 import { createCustomerSchema, updateCustomerSchema } from '@ihms/shared';
-
-// Default company ID for single-tenant mode
-const DEFAULT_COMPANY_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 export const customerRouter = router({
   // List customers with search and pagination
@@ -19,21 +16,23 @@ export const customerRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ input }) => {
-      let whereClause;
+    .query(async ({ ctx, input }) => {
+      const conditions = [eq(customers.companyId, ctx.user.companyId)];
 
       if (input.search) {
         const searchTerm = `%${input.search}%`;
-        whereClause = or(
-          ilike(customers.firstName, searchTerm),
-          ilike(customers.lastName, searchTerm),
-          ilike(customers.email, searchTerm),
-          ilike(customers.phone, searchTerm)
+        conditions.push(
+          or(
+            ilike(customers.firstName, searchTerm),
+            ilike(customers.lastName, searchTerm),
+            ilike(customers.email, searchTerm),
+            ilike(customers.phone, searchTerm)
+          )!
         );
       }
 
       const results = await db.query.customers.findMany({
-        where: whereClause,
+        where: and(...conditions),
         limit: input.limit,
         offset: input.offset,
         orderBy: [desc(customers.createdAt)],
@@ -55,9 +54,9 @@ export const customerRouter = router({
   // Get single customer by ID
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const customer = await db.query.customers.findFirst({
-        where: eq(customers.id, input.id),
+        where: and(eq(customers.id, input.id), eq(customers.companyId, ctx.user.companyId)),
       });
 
       if (!customer) {
@@ -86,7 +85,7 @@ export const customerRouter = router({
     const [customer] = await db
       .insert(customers)
       .values({
-        companyId: DEFAULT_COMPANY_ID,
+        companyId: ctx.user.companyId,
         assignedUserId: ctx.user.userId,
         firstName: input.firstName,
         lastName: input.lastName,
@@ -110,12 +109,12 @@ export const customerRouter = router({
   }),
 
   // Update customer
-  update: protectedProcedure.input(updateCustomerSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(updateCustomerSchema).mutation(async ({ ctx, input }) => {
     const { id, ...updateData } = input;
 
-    // Verify customer exists
+    // Verify customer exists and belongs to user's company
     const existing = await db.query.customers.findFirst({
-      where: eq(customers.id, id),
+      where: and(eq(customers.id, id), eq(customers.companyId, ctx.user.companyId)),
     });
 
     if (!existing) {
@@ -149,10 +148,10 @@ export const customerRouter = router({
   // Delete customer
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ input }) => {
-      // Verify customer exists
+    .mutation(async ({ ctx, input }) => {
+      // Verify customer exists and belongs to user's company
       const existing = await db.query.customers.findFirst({
-        where: eq(customers.id, input.id),
+        where: and(eq(customers.id, input.id), eq(customers.companyId, ctx.user.companyId)),
       });
 
       if (!existing) {

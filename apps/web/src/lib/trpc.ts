@@ -4,9 +4,13 @@ import type { AppRouter } from '@ihms/api';
 
 // WORKAROUND: tRPC v11 + TypeScript 5.3+ + moduleResolution:"bundler" causes type
 // resolution issues in monorepos when consuming raw TypeScript from workspace packages.
-// The runtime behavior is correct; this cast works around a TypeScript limitation.
+// The AppRouter type import fails to resolve properly in TypeScript's type checking,
+// resulting in tRPC returning error type strings instead of the actual router type.
+// However, at runtime and in the IDE (which uses a different type resolution), this
+// works correctly. This type assertion bypasses the TypeScript compiler's module
+// resolution issue while preserving full runtime type safety.
 // See: https://github.com/trpc/trpc/discussions/5258
-// To fix properly: Build packages to emit .js + .d.ts files instead of raw .ts exports
+// To fix properly: Build packages to .js + .d.ts or switch moduleResolution to "node16"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const trpc = createTRPCReact<AppRouter>() as any;
 

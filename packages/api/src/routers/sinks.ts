@@ -11,9 +11,6 @@ import {
   matchToMeasurementSchema,
 } from '@ihms/shared';
 
-// Default company ID for single-tenant mode
-const DEFAULT_COMPANY_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-
 // Matching algorithm types (exported for type inference)
 export interface SinkMatch {
   sink: typeof sinks.$inferSelect;
@@ -160,8 +157,8 @@ function calculateMatchScore(
 
 export const sinkRouter = router({
   // List sinks with filtering
-  list: protectedProcedure.input(listSinksSchema).query(async ({ input }) => {
-    const conditions: ReturnType<typeof eq>[] = [];
+  list: protectedProcedure.input(listSinksSchema).query(async ({ ctx, input }) => {
+    const conditions: ReturnType<typeof eq>[] = [eq(sinks.companyId, ctx.user.companyId)];
 
     if (input.material) {
       conditions.push(eq(sinks.material, input.material));
@@ -224,9 +221,9 @@ export const sinkRouter = router({
   // Get single sink by ID
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const sink = await db.query.sinks.findFirst({
-        where: eq(sinks.id, input.id),
+        where: and(eq(sinks.id, input.id), eq(sinks.companyId, ctx.user.companyId)),
       });
 
       if (!sink) {
@@ -242,10 +239,13 @@ export const sinkRouter = router({
   // Match sinks to a measurement
   matchToMeasurement: protectedProcedure
     .input(matchToMeasurementSchema)
-    .query(async ({ input }) => {
-      // Get the measurement
+    .query(async ({ ctx, input }) => {
+      // Get the measurement and verify it belongs to user's company
       const measurement = await db.query.measurements.findFirst({
-        where: eq(measurements.id, input.measurementId),
+        where: and(
+          eq(measurements.id, input.measurementId),
+          eq(measurements.companyId, ctx.user.companyId)
+        ),
       });
 
       if (!measurement) {
@@ -267,6 +267,7 @@ export const sinkRouter = router({
         .from(sinks)
         .where(
           and(
+            eq(sinks.companyId, ctx.user.companyId),
             eq(sinks.isActive, true),
             lte(sinks.widthInches, maxSinkWidth.toString()),
             lte(sinks.depthInches, maxSinkDepth.toString())
@@ -296,10 +297,10 @@ export const sinkRouter = router({
     }),
 
   // Create a new sink (admin only)
-  create: adminProcedure.input(createSinkSchema).mutation(async ({ input }) => {
-    // Check for duplicate SKU
+  create: adminProcedure.input(createSinkSchema).mutation(async ({ ctx, input }) => {
+    // Check for duplicate SKU within the company
     const existingSku = await db.query.sinks.findFirst({
-      where: eq(sinks.sku, input.sku),
+      where: and(eq(sinks.sku, input.sku), eq(sinks.companyId, ctx.user.companyId)),
     });
 
     if (existingSku) {
@@ -312,7 +313,7 @@ export const sinkRouter = router({
     const [sink] = await db
       .insert(sinks)
       .values({
-        companyId: DEFAULT_COMPANY_ID,
+        companyId: ctx.user.companyId,
         sku: input.sku,
         name: input.name,
         description: input.description,
@@ -333,12 +334,12 @@ export const sinkRouter = router({
   }),
 
   // Update a sink (admin only)
-  update: adminProcedure.input(updateSinkSchema).mutation(async ({ input }) => {
+  update: adminProcedure.input(updateSinkSchema).mutation(async ({ ctx, input }) => {
     const { id, ...updateData } = input;
 
-    // Verify sink exists
+    // Verify sink exists and belongs to user's company
     const existing = await db.query.sinks.findFirst({
-      where: eq(sinks.id, id),
+      where: and(eq(sinks.id, id), eq(sinks.companyId, ctx.user.companyId)),
     });
 
     if (!existing) {
@@ -351,7 +352,7 @@ export const sinkRouter = router({
     // Check for duplicate SKU if SKU is being updated
     if (updateData.sku && updateData.sku !== existing.sku) {
       const existingSku = await db.query.sinks.findFirst({
-        where: eq(sinks.sku, updateData.sku),
+        where: and(eq(sinks.sku, updateData.sku), eq(sinks.companyId, ctx.user.companyId)),
       });
 
       if (existingSku) {
@@ -389,9 +390,9 @@ export const sinkRouter = router({
   // Delete a sink (admin only)
   delete: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const existing = await db.query.sinks.findFirst({
-        where: eq(sinks.id, input.id),
+        where: and(eq(sinks.id, input.id), eq(sinks.companyId, ctx.user.companyId)),
       });
 
       if (!existing) {
@@ -409,9 +410,9 @@ export const sinkRouter = router({
   // Toggle sink active status (admin only)
   toggleActive: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const existing = await db.query.sinks.findFirst({
-        where: eq(sinks.id, input.id),
+        where: and(eq(sinks.id, input.id), eq(sinks.companyId, ctx.user.companyId)),
       });
 
       if (!existing) {

@@ -49,9 +49,9 @@ export function AnalyticsPage() {
     return { startDate, endDate, groupBy: groupBy as 'day' | 'week' | 'month' };
   }, [dateRange]);
 
-  const { data: analytics, isLoading: analyticsLoading } = trpc.quote.getAnalytics.useQuery(dateParams);
-  const { data: trends, isLoading: trendsLoading } = trpc.quote.getTrends.useQuery(trendParams);
-  const { data: repPerformance, isLoading: repsLoading } = trpc.quote.getRepPerformance.useQuery(dateParams);
+  const { data: analytics, isLoading: analyticsLoading, isError: analyticsError, error: analyticsErrorMsg } = trpc.quote.getAnalytics.useQuery(dateParams);
+  const { data: trends, isLoading: trendsLoading, isError: trendsError, error: trendsErrorMsg } = trpc.quote.getTrends.useQuery(trendParams);
+  const { data: repPerformance, isLoading: repsLoading, isError: repsError, error: repsErrorMsg } = trpc.quote.getRepPerformance.useQuery(dateParams);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -106,6 +106,18 @@ export function AnalyticsPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6">
+        {/* Error States */}
+        {(analyticsError || trendsError || repsError) && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            <p className="font-medium">Failed to load some analytics data</p>
+            <div className="text-sm mt-1">
+              {analyticsError && <div>{analyticsErrorMsg?.message || 'Analytics data unavailable'}</div>}
+              {trendsError && <div>{trendsErrorMsg?.message || 'Trends data unavailable'}</div>}
+              {repsError && <div>{repsErrorMsg?.message || 'Rep performance data unavailable'}</div>}
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
         <div className="mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {/* Total Quotes Card */}

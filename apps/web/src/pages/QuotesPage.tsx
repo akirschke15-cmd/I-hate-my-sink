@@ -48,7 +48,7 @@ interface QuoteListItem {
 export function QuotesPage() {
   const [status, setStatus] = useState<QuoteStatus | ''>('');
 
-  const { data, isLoading, error } = trpc.quote.list.useQuery({
+  const { data, isLoading, isError, error } = trpc.quote.list.useQuery({
     status: status || undefined,
     limit: 50,
   });
@@ -131,9 +131,10 @@ export function QuotesPage() {
         </div>
 
         {/* Error State */}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-            <p className="text-red-700">Failed to load quotes. Please try again.</p>
+        {isError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            <p className="font-medium">Failed to load quotes</p>
+            <p className="text-sm">{error?.message || 'Please try again later'}</p>
           </div>
         )}
 

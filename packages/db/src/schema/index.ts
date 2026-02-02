@@ -6,3 +6,4 @@ export * from './measurements';
 export * from './quotes';
 export * from './quote-line-items';
 export * from './email-logs';
+export * from './relations';

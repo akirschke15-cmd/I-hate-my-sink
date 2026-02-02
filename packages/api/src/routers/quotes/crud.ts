@@ -3,19 +3,16 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../../trpc';
 import { db } from '@ihms/db';
 import { quotes, quoteLineItems, customers, measurements } from '@ihms/db/schema';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and, asc } from 'drizzle-orm';
 import { generateQuoteNumber, calculateLineTotal, recalculateQuoteTotals } from './utils';
 import { createQuoteSchema, updateQuoteSchema, quoteStatuses } from './schemas';
-
-// Default company ID for single-tenant mode
-const DEFAULT_COMPANY_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 export const quotesCrudRouter = router({
   // Create a new quote with line items
   create: protectedProcedure.input(createQuoteSchema).mutation(async ({ ctx, input }) => {
-    // Verify customer exists
+    // Verify customer exists and belongs to user's company
     const customer = await db.query.customers.findFirst({
-      where: eq(customers.id, input.customerId),
+      where: and(eq(customers.id, input.customerId), eq(customers.companyId, ctx.user.companyId)),
     });
 
     if (!customer) {
@@ -25,10 +22,13 @@ export const quotesCrudRouter = router({
       });
     }
 
-    // Verify measurement if provided
+    // Verify measurement if provided and belongs to user's company
     if (input.measurementId) {
       const measurement = await db.query.measurements.findFirst({
-        where: eq(measurements.id, input.measurementId),
+        where: and(
+          eq(measurements.id, input.measurementId),
+          eq(measurements.companyId, ctx.user.companyId)
+        ),
       });
 
       if (!measurement) {
@@ -44,7 +44,7 @@ export const quotesCrudRouter = router({
     let attempts = 0;
     while (attempts < 10) {
       const existing = await db.query.quotes.findFirst({
-        where: eq(quotes.quoteNumber, quoteNumber),
+        where: and(eq(quotes.quoteNumber, quoteNumber), eq(quotes.companyId, ctx.user.companyId)),
       });
       if (!existing) break;
       quoteNumber = generateQuoteNumber();
@@ -62,7 +62,7 @@ export const quotesCrudRouter = router({
     const [quote] = await db
       .insert(quotes)
       .values({
-        companyId: DEFAULT_COMPANY_ID,
+        companyId: ctx.user.companyId,
         customerId: input.customerId,
         measurementId: input.measurementId,
         createdById: ctx.user.userId,
@@ -97,9 +97,16 @@ export const quotesCrudRouter = router({
     // Recalculate totals
     await recalculateQuoteTotals(quote.id, input.taxRate, input.discountAmount);
 
-    // Fetch and return complete quote
+    // Fetch and return complete quote with relations
     return db.query.quotes.findFirst({
       where: eq(quotes.id, quote.id),
+      with: {
+        lineItems: {
+          orderBy: [asc(quoteLineItems.sortOrder)],
+        },
+        customer: true,
+        measurement: true,
+      },
     });
   }),
 
@@ -112,8 +119,12 @@ export const quotesCrudRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ input }) => {
-      const whereClause = input.status ? eq(quotes.status, input.status) : undefined;
+    .query(async ({ ctx, input }) => {
+      const conditions = [eq(quotes.companyId, ctx.user.companyId)];
+      if (input.status) {
+        conditions.push(eq(quotes.status, input.status));
+      }
+      const whereClause = and(...conditions);
 
       const results = await db
         .select({
@@ -157,10 +168,10 @@ export const quotesCrudRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ input }) => {
-      // Verify customer exists
+    .query(async ({ ctx, input }) => {
+      // Verify customer exists and belongs to user's company
       const customer = await db.query.customers.findFirst({
-        where: eq(customers.id, input.customerId),
+        where: and(eq(customers.id, input.customerId), eq(customers.companyId, ctx.user.companyId)),
       });
 
       if (!customer) {
@@ -171,7 +182,7 @@ export const quotesCrudRouter = router({
       }
 
       const results = await db.query.quotes.findMany({
-        where: eq(quotes.customerId, input.customerId),
+        where: and(eq(quotes.customerId, input.customerId), eq(quotes.companyId, ctx.user.companyId)),
         limit: input.limit,
         offset: input.offset,
         orderBy: [desc(quotes.createdAt)],
@@ -183,9 +194,18 @@ export const quotesCrudRouter = router({
   // Get single quote with line items
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // Use Drizzle's relational query API with eager loading to fetch all data in a single query
+      // This eliminates the N+1 query problem by using JOIN operations under the hood
       const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, input.id),
+        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
+        with: {
+          lineItems: {
+            orderBy: [asc(quoteLineItems.sortOrder)],
+          },
+          customer: true,
+          measurement: true,
+        },
       });
 
       if (!quote) {
@@ -195,52 +215,15 @@ export const quotesCrudRouter = router({
         });
       }
 
-      // Get line items
-      const lineItems = await db
-        .select({
-          id: quoteLineItems.id,
-          type: quoteLineItems.type,
-          name: quoteLineItems.name,
-          description: quoteLineItems.description,
-          sku: quoteLineItems.sku,
-          quantity: quoteLineItems.quantity,
-          unitPrice: quoteLineItems.unitPrice,
-          discountPercent: quoteLineItems.discountPercent,
-          lineTotal: quoteLineItems.lineTotal,
-          sortOrder: quoteLineItems.sortOrder,
-          sinkId: quoteLineItems.sinkId,
-        })
-        .from(quoteLineItems)
-        .where(eq(quoteLineItems.quoteId, quote.id))
-        .orderBy(quoteLineItems.sortOrder);
-
-      // Get customer info
-      const customer = await db.query.customers.findFirst({
-        where: eq(customers.id, quote.customerId),
-      });
-
-      // Get measurement info if linked
-      let measurement = null;
-      if (quote.measurementId) {
-        measurement = await db.query.measurements.findFirst({
-          where: eq(measurements.id, quote.measurementId),
-        });
-      }
-
-      return {
-        ...quote,
-        lineItems,
-        customer,
-        measurement,
-      };
+      return quote;
     }),
 
   // Update quote details
-  update: protectedProcedure.input(updateQuoteSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(updateQuoteSchema).mutation(async ({ ctx, input }) => {
     const { id, ...updateData } = input;
 
     const existing = await db.query.quotes.findFirst({
-      where: eq(quotes.id, id),
+      where: and(eq(quotes.id, id), eq(quotes.companyId, ctx.user.companyId)),
     });
 
     if (!existing) {
@@ -291,9 +274,9 @@ export const quotesCrudRouter = router({
         status: z.enum(quoteStatuses),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const existing = await db.query.quotes.findFirst({
-        where: eq(quotes.id, input.id),
+        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
       });
 
       if (!existing) {
@@ -318,9 +301,9 @@ export const quotesCrudRouter = router({
   // Delete quote
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const existing = await db.query.quotes.findFirst({
-        where: eq(quotes.id, input.id),
+        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
       });
 
       if (!existing) {
@@ -344,9 +327,9 @@ export const quotesCrudRouter = router({
         signatureDataUrl: z.string().min(1),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const existing = await db.query.quotes.findFirst({
-        where: eq(quotes.id, input.id),
+        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
       });
 
       if (!existing) {

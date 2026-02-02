@@ -9,9 +9,9 @@ export function DashboardPage() {
   const { isOnline, pendingSyncCount, isSyncing, syncPending } = useOffline();
 
   // Fetch dashboard stats
-  const { data: customers } = trpc.customer.list.useQuery({ limit: 5 });
-  const { data: quotes } = trpc.quote.list.useQuery({ limit: 5 });
-  const { data: sinks } = trpc.sink.list.useQuery({ limit: 1 });
+  const { data: customers, isError: customersError, error: customersErrorMsg } = trpc.customer.list.useQuery({ limit: 5 });
+  const { data: quotes, isError: quotesError, error: quotesErrorMsg } = trpc.quote.list.useQuery({ limit: 5 });
+  const { data: sinks, isError: sinksError, error: sinksErrorMsg } = trpc.sink.list.useQuery({ limit: 1 });
 
   const customerCount = customers?.length || 0;
   const quoteCount = quotes?.length || 0;
@@ -109,6 +109,18 @@ export function DashboardPage() {
             Here's what's happening with your sales pipeline today.
           </p>
         </div>
+
+        {/* Error States */}
+        {(customersError || quotesError || sinksError) && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            <p className="font-medium">Failed to load some dashboard data</p>
+            <p className="text-sm">
+              {customersError && customersErrorMsg?.message}
+              {quotesError && quotesErrorMsg?.message}
+              {sinksError && sinksErrorMsg?.message}
+            </p>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

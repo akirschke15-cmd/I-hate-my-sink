@@ -3,10 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc';
 import { db } from '@ihms/db';
 import { measurements, customers } from '@ihms/db/schema';
-import { eq, desc } from 'drizzle-orm';
-
-// Default company ID for single-tenant mode
-const DEFAULT_COMPANY_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+import { eq, desc, and } from 'drizzle-orm';
 
 const countertopMaterials = [
   'granite',
@@ -72,10 +69,10 @@ export const measurementRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ input }) => {
-      // Verify customer exists
+    .query(async ({ ctx, input }) => {
+      // Verify customer exists and belongs to user's company
       const customer = await db.query.customers.findFirst({
-        where: eq(customers.id, input.customerId),
+        where: and(eq(customers.id, input.customerId), eq(customers.companyId, ctx.user.companyId)),
       });
 
       if (!customer) {
@@ -86,7 +83,10 @@ export const measurementRouter = router({
       }
 
       const results = await db.query.measurements.findMany({
-        where: eq(measurements.customerId, input.customerId),
+        where: and(
+          eq(measurements.customerId, input.customerId),
+          eq(measurements.companyId, ctx.user.companyId)
+        ),
         limit: input.limit,
         offset: input.offset,
         orderBy: [desc(measurements.createdAt)],
@@ -98,9 +98,9 @@ export const measurementRouter = router({
   // Get single measurement
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const measurement = await db.query.measurements.findFirst({
-        where: eq(measurements.id, input.id),
+        where: and(eq(measurements.id, input.id), eq(measurements.companyId, ctx.user.companyId)),
       });
 
       if (!measurement) {
@@ -115,9 +115,9 @@ export const measurementRouter = router({
 
   // Create measurement
   create: protectedProcedure.input(createMeasurementSchema).mutation(async ({ ctx, input }) => {
-    // Verify customer exists
+    // Verify customer exists and belongs to user's company
     const customer = await db.query.customers.findFirst({
-      where: eq(customers.id, input.customerId),
+      where: and(eq(customers.id, input.customerId), eq(customers.companyId, ctx.user.companyId)),
     });
 
     if (!customer) {
@@ -130,7 +130,7 @@ export const measurementRouter = router({
     const [measurement] = await db
       .insert(measurements)
       .values({
-        companyId: DEFAULT_COMPANY_ID,
+        companyId: ctx.user.companyId,
         customerId: input.customerId,
         createdById: ctx.user.userId,
         // Cabinet dimensions
@@ -171,12 +171,12 @@ export const measurementRouter = router({
   }),
 
   // Update measurement
-  update: protectedProcedure.input(updateMeasurementSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(updateMeasurementSchema).mutation(async ({ ctx, input }) => {
     const { id, ...updateData } = input;
 
-    // Verify measurement exists
+    // Verify measurement exists and belongs to user's company
     const existing = await db.query.measurements.findFirst({
-      where: eq(measurements.id, id),
+      where: and(eq(measurements.id, id), eq(measurements.companyId, ctx.user.companyId)),
     });
 
     if (!existing) {
@@ -268,9 +268,9 @@ export const measurementRouter = router({
   // Delete measurement
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const existing = await db.query.measurements.findFirst({
-        where: eq(measurements.id, input.id),
+        where: and(eq(measurements.id, input.id), eq(measurements.companyId, ctx.user.companyId)),
       });
 
       if (!existing) {
