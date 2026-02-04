@@ -5,6 +5,7 @@ import { db } from '@ihms/db';
 import { customers } from '@ihms/db/schema';
 import { eq, ilike, or, desc, and } from 'drizzle-orm';
 import { createCustomerSchema, updateCustomerSchema } from '@ihms/shared';
+import { isSalesperson } from '../utils/rbac';
 
 export const customerRouter = router({
   // List customers with search and pagination
@@ -18,6 +19,11 @@ export const customerRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const conditions = [eq(customers.companyId, ctx.user.companyId)];
+
+      // Salespeople can only see their assigned customers
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(customers.assignedUserId, ctx.user.userId));
+      }
 
       if (input.search) {
         const searchTerm = `%${input.search}%`;
@@ -55,8 +61,15 @@ export const customerRouter = router({
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
+      const conditions = [eq(customers.id, input.id), eq(customers.companyId, ctx.user.companyId)];
+
+      // Salespeople can only access their assigned customers
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(customers.assignedUserId, ctx.user.userId));
+      }
+
       const customer = await db.query.customers.findFirst({
-        where: and(eq(customers.id, input.id), eq(customers.companyId, ctx.user.companyId)),
+        where: and(...conditions),
       });
 
       if (!customer) {
@@ -110,11 +123,18 @@ export const customerRouter = router({
 
   // Update customer
   update: protectedProcedure.input(updateCustomerSchema).mutation(async ({ ctx, input }) => {
-    const { id, ...updateData } = input;
+    const { id, version, ...updateData } = input;
+
+    const conditions = [eq(customers.id, id), eq(customers.companyId, ctx.user.companyId)];
+
+    // Salespeople can only update their assigned customers
+    if (isSalesperson(ctx.user.role)) {
+      conditions.push(eq(customers.assignedUserId, ctx.user.userId));
+    }
 
     // Verify customer exists and belongs to user's company
     const existing = await db.query.customers.findFirst({
-      where: and(eq(customers.id, id), eq(customers.companyId, ctx.user.companyId)),
+      where: and(...conditions),
     });
 
     if (!existing) {
@@ -124,10 +144,24 @@ export const customerRouter = router({
       });
     }
 
+    // Check for version conflict
+    if (version !== undefined && version !== existing.version) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This record was modified by another user. Please refresh and try again.',
+        cause: {
+          serverVersion: existing.version,
+          clientVersion: version,
+          serverData: existing,
+        },
+      });
+    }
+
     const [updated] = await db
       .update(customers)
       .set({
         ...updateData,
+        version: existing.version + 1,
         updatedAt: new Date(),
       })
       .where(eq(customers.id, id))
@@ -141,6 +175,7 @@ export const customerRouter = router({
       phone: updated.phone,
       address: updated.address,
       notes: updated.notes,
+      version: updated.version,
       updatedAt: updated.updatedAt,
     };
   }),
@@ -149,9 +184,16 @@ export const customerRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      const conditions = [eq(customers.id, input.id), eq(customers.companyId, ctx.user.companyId)];
+
+      // Salespeople can only delete their assigned customers
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(customers.assignedUserId, ctx.user.userId));
+      }
+
       // Verify customer exists and belongs to user's company
       const existing = await db.query.customers.findFirst({
-        where: and(eq(customers.id, input.id), eq(customers.companyId, ctx.user.companyId)),
+        where: and(...conditions),
       });
 
       if (!existing) {

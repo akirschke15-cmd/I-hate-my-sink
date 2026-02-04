@@ -24,6 +24,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "pdfkit": "^0.17.2",
+    "rate-limit-redis": "^4.3.1",
+    "redis": "^5.10.0",
     "resend": "^6.9.1",
     "zod": "^3.22.4"
   },

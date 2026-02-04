@@ -49,9 +49,9 @@ export function AnalyticsPage() {
     return { startDate, endDate, groupBy: groupBy as 'day' | 'week' | 'month' };
   }, [dateRange]);
 
-  const { data: analytics, isLoading: analyticsLoading, isError: analyticsError, error: analyticsErrorMsg } = trpc.quote.getAnalytics.useQuery(dateParams);
-  const { data: trends, isLoading: trendsLoading, isError: trendsError, error: trendsErrorMsg } = trpc.quote.getTrends.useQuery(trendParams);
-  const { data: repPerformance, isLoading: repsLoading, isError: repsError, error: repsErrorMsg } = trpc.quote.getRepPerformance.useQuery(dateParams);
+  const { data: analytics, isLoading: analyticsLoading, isError: analyticsError, error: analyticsErrorMsg } = trpc.quote.analytics.getAnalytics.useQuery(dateParams);
+  const { data: trends, isLoading: trendsLoading, isError: trendsError, error: trendsErrorMsg } = trpc.quote.analytics.getTrends.useQuery(trendParams);
+  const { data: repPerformance, isLoading: repsLoading, isError: repsError, error: repsErrorMsg } = trpc.quote.analytics.getRepPerformance.useQuery(dateParams);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

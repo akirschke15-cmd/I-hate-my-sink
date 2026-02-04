@@ -62,12 +62,21 @@ export function QuoteDetailPage() {
   const updateStatus = trpc.quote.updateStatus.useMutation({
     onSuccess: () => {
       utils.quote.get.invalidate({ id: id! });
+      toast.success('Quote status updated successfully');
+    },
+    onError: (error: { message: string }) => {
+      toast.error(error.message || 'Failed to update quote status');
     },
   });
 
   const saveSignature = trpc.quote.saveSignature.useMutation({
     onSuccess: () => {
       utils.quote.get.invalidate({ id: id! });
+      setShowSignature(false);
+      toast.success('Signature saved and quote accepted successfully');
+    },
+    onError: (error: { message: string }) => {
+      toast.error(error.message || 'Failed to save signature');
       setShowSignature(false);
     },
   });
@@ -144,6 +153,26 @@ export function QuoteDetailPage() {
     });
   };
 
+  const getExpirationStatus = () => {
+    if (!quote?.validUntil) return null;
+
+    const now = new Date();
+    const validUntil = new Date(quote.validUntil);
+    const daysRemaining = Math.ceil((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysRemaining < 0) {
+      return { isExpired: true, daysRemaining: Math.abs(daysRemaining), message: 'expired' };
+    } else if (daysRemaining === 0) {
+      return { isExpired: false, daysRemaining: 0, message: 'expires today' };
+    } else if (daysRemaining <= 7) {
+      return { isExpired: false, daysRemaining, message: `expires in ${daysRemaining} day${daysRemaining > 1 ? 's' : ''}` };
+    }
+
+    return null;
+  };
+
+  const expirationStatus = getExpirationStatus();
+
   const handleAddLineItem = () => {
     if (!newItemName || newItemUnitPrice <= 0 || !id) return;
 
@@ -176,6 +205,14 @@ export function QuoteDetailPage() {
 
   const handleSaveSignature = (dataUrl: string) => {
     if (!id) return;
+
+    // Check expiration before saving signature
+    if (expirationStatus?.isExpired) {
+      toast.error('This quote has expired and cannot be signed');
+      setShowSignature(false);
+      return;
+    }
+
     saveSignature.mutate({ id, signatureDataUrl: dataUrl });
   };
 
@@ -356,6 +393,8 @@ export function QuoteDetailPage() {
               <>
                 <Button
                   onClick={() => setShowSignature(true)}
+                  disabled={expirationStatus?.isExpired}
+                  title={expirationStatus?.isExpired ? 'Quote has expired' : undefined}
                 >
                   Capture Signature
                 </Button>
@@ -399,6 +438,50 @@ export function QuoteDetailPage() {
           </div>
         </div>
       </header>
+
+      {/* Expiration Warning Banner */}
+      {expirationStatus && (
+        <div
+          className={`mx-auto max-w-7xl px-4 py-3 ${
+            expirationStatus.isExpired
+              ? 'bg-red-50 border-l-4 border-red-400'
+              : 'bg-yellow-50 border-l-4 border-yellow-400'
+          }`}
+        >
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg
+                className={`h-5 w-5 ${expirationStatus.isExpired ? 'text-red-400' : 'text-yellow-400'}`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p
+                className={`text-sm font-medium ${
+                  expirationStatus.isExpired ? 'text-red-800' : 'text-yellow-800'
+                }`}
+              >
+                {expirationStatus.isExpired ? (
+                  <>
+                    This quote expired {expirationStatus.daysRemaining} day{expirationStatus.daysRemaining > 1 ? 's' : ''} ago and cannot be accepted or signed.
+                  </>
+                ) : (
+                  <>
+                    This quote {expirationStatus.message}. Please finalize acceptance soon.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="grid gap-6 lg:grid-cols-3">

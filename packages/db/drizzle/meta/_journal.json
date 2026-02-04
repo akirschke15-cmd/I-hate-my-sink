@@ -15,6 +15,13 @@
       "when": 1769970355343,
       "tag": "0001_slow_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770186681337,
+      "tag": "0002_normal_shaman",
+      "breakpoints": true
     }
   ]
 }

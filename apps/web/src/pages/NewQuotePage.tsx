@@ -45,6 +45,7 @@ export function NewQuotePage() {
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [showAddItem, setShowAddItem] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // New line item form state
   const [newItemType, setNewItemType] = useState<LineItemType>('product');
@@ -54,6 +55,7 @@ export function NewQuotePage() {
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemUnitPrice, setNewItemUnitPrice] = useState(0);
   const [newItemDiscountPercent, setNewItemDiscountPercent] = useState(0);
+  const [newItemErrors, setNewItemErrors] = useState<Record<string, string>>({});
 
   // Fetch customers
   const { data: customersData } = trpc.customer.list.useQuery({ limit: 100 });
@@ -144,8 +146,35 @@ export function NewQuotePage() {
     }).format(price);
   };
 
+  const validateLineItem = () => {
+    const itemErrors: Record<string, string> = {};
+
+    if (!newItemName.trim()) {
+      itemErrors.name = 'Item name is required';
+    }
+
+    if (newItemQuantity < 1) {
+      itemErrors.quantity = 'Quantity must be at least 1';
+    }
+
+    if (newItemUnitPrice < 0) {
+      itemErrors.unitPrice = 'Price cannot be negative';
+    }
+
+    if (newItemUnitPrice === 0) {
+      itemErrors.unitPrice = 'Price must be greater than 0';
+    }
+
+    if (newItemDiscountPercent < 0 || newItemDiscountPercent > 100) {
+      itemErrors.discountPercent = 'Discount must be between 0 and 100';
+    }
+
+    setNewItemErrors(itemErrors);
+    return Object.keys(itemErrors).length === 0;
+  };
+
   const handleAddLineItem = () => {
-    if (!newItemName || newItemUnitPrice <= 0) return;
+    if (!validateLineItem()) return;
 
     const newItem: LineItem = {
       id: `temp-${Date.now()}`,
@@ -171,14 +200,42 @@ export function NewQuotePage() {
     setNewItemQuantity(1);
     setNewItemUnitPrice(0);
     setNewItemDiscountPercent(0);
+    setNewItemErrors({});
   };
 
   const handleRemoveLineItem = (id: string) => {
     setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
+  const validateQuote = () => {
+    const quoteErrors: Record<string, string> = {};
+
+    if (!customerId) {
+      quoteErrors.customer = 'Please select a customer';
+    }
+
+    if (lineItems.length === 0) {
+      quoteErrors.lineItems = 'Add at least one line item to the quote';
+    }
+
+    if (taxRate < 0 || taxRate > 100) {
+      quoteErrors.taxRate = 'Tax rate must be between 0 and 100';
+    }
+
+    if (discountAmount < 0) {
+      quoteErrors.discountAmount = 'Discount cannot be negative';
+    }
+
+    if (discountAmount > subtotal) {
+      quoteErrors.discountAmount = 'Discount cannot exceed subtotal';
+    }
+
+    setErrors(quoteErrors);
+    return Object.keys(quoteErrors).length === 0;
+  };
+
   const handleSubmit = () => {
-    if (!customerId || lineItems.length === 0) return;
+    if (!validateQuote()) return;
 
     createQuote.mutate({
       customerId,
@@ -236,7 +293,17 @@ export function NewQuotePage() {
             label="Select Customer"
             options={[{ value: '', label: 'Choose a customer...' }, ...customerOptions]}
             value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
+            onChange={(e) => {
+              setCustomerId(e.target.value);
+              if (errors.customer) {
+                setErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.customer;
+                  return next;
+                });
+              }
+            }}
+            error={errors.customer}
           />
           {measurement && (
             <p className="mt-2 text-sm text-gray-500">
@@ -248,8 +315,40 @@ export function NewQuotePage() {
         {/* Line Items */}
         <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Line Items</h2>
-            <Button size="sm" variant="secondary" onClick={() => setShowAddItem(true)}>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900">Line Items</h2>
+              {errors.lineItems && (
+                <p className="mt-1 flex items-center gap-1 text-sm text-red-600">
+                  <svg
+                    className="h-4 w-4 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>{errors.lineItems}</span>
+                </p>
+              )}
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setShowAddItem(true);
+                if (errors.lineItems) {
+                  setErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.lineItems;
+                    return next;
+                  });
+                }
+              }}
+            >
               Add Item
             </Button>
           </div>
@@ -332,8 +431,19 @@ export function NewQuotePage() {
                 <Input
                   label="Name"
                   value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
+                  onChange={(e) => {
+                    setNewItemName(e.target.value);
+                    if (newItemErrors.name) {
+                      setNewItemErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.name;
+                        return next;
+                      });
+                    }
+                  }}
                   placeholder="Item name"
+                  error={newItemErrors.name}
+                  required
                 />
                 <Input
                   label="SKU (optional)"
@@ -352,7 +462,18 @@ export function NewQuotePage() {
                   type="number"
                   min={1}
                   value={newItemQuantity}
-                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  onChange={(e) => {
+                    setNewItemQuantity(parseInt(e.target.value) || 1);
+                    if (newItemErrors.quantity) {
+                      setNewItemErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.quantity;
+                        return next;
+                      });
+                    }
+                  }}
+                  error={newItemErrors.quantity}
+                  required
                 />
                 <Input
                   label="Unit Price"
@@ -360,7 +481,18 @@ export function NewQuotePage() {
                   min={0}
                   step={0.01}
                   value={newItemUnitPrice}
-                  onChange={(e) => setNewItemUnitPrice(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    setNewItemUnitPrice(parseFloat(e.target.value) || 0);
+                    if (newItemErrors.unitPrice) {
+                      setNewItemErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.unitPrice;
+                        return next;
+                      });
+                    }
+                  }}
+                  error={newItemErrors.unitPrice}
+                  required
                 />
                 <Input
                   label="Discount %"
@@ -368,11 +500,25 @@ export function NewQuotePage() {
                   min={0}
                   max={100}
                   value={newItemDiscountPercent}
-                  onChange={(e) => setNewItemDiscountPercent(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    setNewItemDiscountPercent(parseFloat(e.target.value) || 0);
+                    if (newItemErrors.discountPercent) {
+                      setNewItemErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.discountPercent;
+                        return next;
+                      });
+                    }
+                  }}
+                  error={newItemErrors.discountPercent}
                 />
               </div>
               <div className="mt-4 flex gap-2">
-                <Button size="sm" onClick={handleAddLineItem}>
+                <Button
+                  size="sm"
+                  onClick={handleAddLineItem}
+                  disabled={Object.keys(newItemErrors).length > 0}
+                >
                   Add
                 </Button>
                 <Button
@@ -401,7 +547,17 @@ export function NewQuotePage() {
               max={100}
               step={0.01}
               value={taxRate}
-              onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+              onChange={(e) => {
+                setTaxRate(parseFloat(e.target.value) || 0);
+                if (errors.taxRate) {
+                  setErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.taxRate;
+                    return next;
+                  });
+                }
+              }}
+              error={errors.taxRate}
             />
             <Input
               label="Discount Amount ($)"
@@ -409,7 +565,17 @@ export function NewQuotePage() {
               min={0}
               step={0.01}
               value={discountAmount}
-              onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+              onChange={(e) => {
+                setDiscountAmount(parseFloat(e.target.value) || 0);
+                if (errors.discountAmount) {
+                  setErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.discountAmount;
+                    return next;
+                  });
+                }
+              }}
+              error={errors.discountAmount}
             />
             <Input
               label="Valid Until"
@@ -463,7 +629,7 @@ export function NewQuotePage() {
           <Button
             onClick={handleSubmit}
             isLoading={createQuote.isPending}
-            disabled={!customerId || lineItems.length === 0}
+            disabled={!customerId || lineItems.length === 0 || Object.keys(errors).length > 0}
           >
             Create Quote
           </Button>

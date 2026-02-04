@@ -29,6 +29,7 @@ export const updateQuoteSchema = z.object({
   discountAmount: z.number().min(0).optional(),
   validUntil: z.string().datetime().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  version: z.number().int().positive().optional(),
 });
 
 export const addLineItemSchema = z.object({

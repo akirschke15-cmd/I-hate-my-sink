@@ -86,6 +86,7 @@ export const measurements = pgTable('measurements', {
   // Offline sync support
   localId: varchar('local_id', { length: 100 }), // Client-generated ID for offline sync
   syncedAt: timestamp('synced_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

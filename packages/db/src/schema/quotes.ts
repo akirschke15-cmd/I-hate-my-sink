@@ -50,6 +50,7 @@ export const quotes = pgTable('quotes', {
   // Offline sync support
   localId: varchar('local_id', { length: 100 }),
   syncedAt: timestamp('synced_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

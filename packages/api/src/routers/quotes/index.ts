@@ -10,5 +10,5 @@ export const quotesRouter = router({
   ...quotesLineItemsRouter._def.procedures,
   ...quotesEmailRouter._def.procedures,
   ...quotesIntegrationsRouter._def.procedures,
-  ...quotesAnalyticsRouter._def.procedures,
+  analytics: quotesAnalyticsRouter,
 });

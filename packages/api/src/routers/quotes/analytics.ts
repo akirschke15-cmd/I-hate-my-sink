@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../../trpc';
+import { TRPCError } from '@trpc/server';
 import { db } from '@ihms/db';
 import { quotes, users } from '@ihms/db/schema';
-import { and, gte, lte, sql } from 'drizzle-orm';
+import { and, gte, lte, sql, eq } from 'drizzle-orm';
+import { isAdmin } from '../../utils/rbac';
 
 export const quotesAnalyticsRouter = router({
   // Get analytics summary
@@ -13,8 +15,15 @@ export const quotesAnalyticsRouter = router({
         endDate: z.string().datetime().optional(),
       })
     )
-    .query(async ({ input }) => {
-      const conditions: ReturnType<typeof gte>[] = [];
+    .query(async ({ input, ctx }) => {
+      const conditions: (ReturnType<typeof gte> | ReturnType<typeof eq>)[] = [
+        eq(quotes.companyId, ctx.user.companyId),
+      ];
+
+      // If salesperson, filter by their own quotes only
+      if (!isAdmin(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
 
       if (input.startDate) {
         conditions.push(gte(quotes.createdAt, new Date(input.startDate)));
@@ -33,7 +42,7 @@ export const quotesAnalyticsRouter = router({
           signedAt: quotes.signedAt,
         })
         .from(quotes)
-        .where(conditions.length > 0 ? and(...conditions) : undefined);
+        .where(and(...conditions));
 
       // Calculate counts by status
       const byStatus = {
@@ -94,7 +103,18 @@ export const quotesAnalyticsRouter = router({
         groupBy: z.enum(['day', 'week', 'month']).default('day'),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const conditions: (ReturnType<typeof gte> | ReturnType<typeof eq> | ReturnType<typeof lte>)[] = [
+        eq(quotes.companyId, ctx.user.companyId),
+        gte(quotes.createdAt, new Date(input.startDate)),
+        lte(quotes.createdAt, new Date(input.endDate)),
+      ];
+
+      // If salesperson, filter by their own quotes only
+      if (!isAdmin(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
+
       const allQuotes = await db
         .select({
           status: quotes.status,
@@ -102,12 +122,7 @@ export const quotesAnalyticsRouter = router({
           createdAt: quotes.createdAt,
         })
         .from(quotes)
-        .where(
-          and(
-            gte(quotes.createdAt, new Date(input.startDate)),
-            lte(quotes.createdAt, new Date(input.endDate))
-          )
-        )
+        .where(and(...conditions))
         .orderBy(quotes.createdAt);
 
       // Group by period
@@ -151,7 +166,7 @@ export const quotesAnalyticsRouter = router({
         .sort((a, b) => a.period.localeCompare(b.period));
     }),
 
-  // Get sales rep performance
+  // Get sales rep performance (ADMIN ONLY)
   getRepPerformance: protectedProcedure
     .input(
       z.object({
@@ -159,8 +174,18 @@ export const quotesAnalyticsRouter = router({
         endDate: z.string().datetime().optional(),
       })
     )
-    .query(async ({ input }) => {
-      const conditions: ReturnType<typeof gte>[] = [];
+    .query(async ({ input, ctx }) => {
+      // ADMIN ONLY - salespeople cannot view rep performance data
+      if (!isAdmin(ctx.user.role)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only administrators can view sales rep performance data',
+        });
+      }
+
+      const conditions: (ReturnType<typeof gte> | ReturnType<typeof eq> | ReturnType<typeof lte>)[] = [
+        eq(quotes.companyId, ctx.user.companyId),
+      ];
 
       if (input.startDate) {
         conditions.push(gte(quotes.createdAt, new Date(input.startDate)));
@@ -179,7 +204,7 @@ export const quotesAnalyticsRouter = router({
           signedAt: quotes.signedAt,
         })
         .from(quotes)
-        .where(conditions.length > 0 ? and(...conditions) : undefined);
+        .where(and(...conditions));
 
       // Get user info
       const userIds = [...new Set(quotesWithCreator.map((q) => q.createdById))];

@@ -4,6 +4,7 @@ import { router, protectedProcedure } from '../trpc';
 import { db } from '@ihms/db';
 import { measurements, customers } from '@ihms/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
+import { isSalesperson } from '../utils/rbac';
 
 const countertopMaterials = [
   'granite',
@@ -57,6 +58,7 @@ const createMeasurementSchema = z.object({
 
 const updateMeasurementSchema = createMeasurementSchema.partial().extend({
   id: z.string().uuid(),
+  version: z.number().int().positive().optional(),
 });
 
 export const measurementRouter = router({
@@ -71,8 +73,18 @@ export const measurementRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Verify customer exists and belongs to user's company
+      const customerConditions = [
+        eq(customers.id, input.customerId),
+        eq(customers.companyId, ctx.user.companyId),
+      ];
+
+      // Salespeople can only access measurements for their assigned customers
+      if (isSalesperson(ctx.user.role)) {
+        customerConditions.push(eq(customers.assignedUserId, ctx.user.userId));
+      }
+
       const customer = await db.query.customers.findFirst({
-        where: and(eq(customers.id, input.customerId), eq(customers.companyId, ctx.user.companyId)),
+        where: and(...customerConditions),
       });
 
       if (!customer) {
@@ -99,8 +111,15 @@ export const measurementRouter = router({
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
+      const conditions = [eq(measurements.id, input.id), eq(measurements.companyId, ctx.user.companyId)];
+
+      // Salespeople can only access measurements they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(measurements.createdById, ctx.user.userId));
+      }
+
       const measurement = await db.query.measurements.findFirst({
-        where: and(eq(measurements.id, input.id), eq(measurements.companyId, ctx.user.companyId)),
+        where: and(...conditions),
       });
 
       if (!measurement) {
@@ -172,11 +191,18 @@ export const measurementRouter = router({
 
   // Update measurement
   update: protectedProcedure.input(updateMeasurementSchema).mutation(async ({ ctx, input }) => {
-    const { id, ...updateData } = input;
+    const { id, version, ...updateData } = input;
+
+    const conditions = [eq(measurements.id, id), eq(measurements.companyId, ctx.user.companyId)];
+
+    // Salespeople can only update measurements they created
+    if (isSalesperson(ctx.user.role)) {
+      conditions.push(eq(measurements.createdById, ctx.user.userId));
+    }
 
     // Verify measurement exists and belongs to user's company
     const existing = await db.query.measurements.findFirst({
-      where: and(eq(measurements.id, id), eq(measurements.companyId, ctx.user.companyId)),
+      where: and(...conditions),
     });
 
     if (!existing) {
@@ -186,8 +212,22 @@ export const measurementRouter = router({
       });
     }
 
+    // Check for version conflict
+    if (version !== undefined && version !== existing.version) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This record was modified by another user. Please refresh and try again.',
+        cause: {
+          serverVersion: existing.version,
+          clientVersion: version,
+          serverData: existing,
+        },
+      });
+    }
+
     // Convert numbers to strings for decimal fields
     const dbUpdateData: Record<string, unknown> = {
+      version: existing.version + 1,
       updatedAt: new Date(),
       syncedAt: new Date(),
     };
@@ -269,8 +309,15 @@ export const measurementRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      const conditions = [eq(measurements.id, input.id), eq(measurements.companyId, ctx.user.companyId)];
+
+      // Salespeople can only delete measurements they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(measurements.createdById, ctx.user.userId));
+      }
+
       const existing = await db.query.measurements.findFirst({
-        where: and(eq(measurements.id, input.id), eq(measurements.companyId, ctx.user.companyId)),
+        where: and(...conditions),
       });
 
       if (!existing) {

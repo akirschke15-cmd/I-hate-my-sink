@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { NewCustomerPage } from './pages/NewCustomerPage';
 import { CustomerDetailPage } from './pages/CustomerDetailPage';
@@ -14,6 +15,7 @@ import { QuotesPage } from './pages/QuotesPage';
 import { NewQuotePage } from './pages/NewQuotePage';
 import { QuoteDetailPage } from './pages/QuoteDetailPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SalesHistoryPage } from './pages/SalesHistoryPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,6 +30,28 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -139,6 +163,22 @@ function App() {
           <ProtectedRoute>
             <AnalyticsPage />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sales-history"
+        element={
+          <ProtectedRoute>
+            <SalesHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminDashboardPage />
+          </AdminRoute>
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

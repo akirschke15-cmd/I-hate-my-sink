@@ -225,13 +225,35 @@ export function MeasurementForm({
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
           <textarea
-            className="block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className={`block w-full rounded-lg border px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 ${
+              errors.notes
+                ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'
+            }`}
             rows={3}
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
             placeholder="Any additional details about the installation..."
+            aria-invalid={errors.notes ? 'true' : 'false'}
+            aria-describedby={errors.notes ? 'notes-error' : undefined}
           />
-          {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
+          {errors.notes && (
+            <p id="notes-error" className="mt-1 flex items-center gap-1 text-sm text-red-600">
+              <svg
+                className="h-4 w-4 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>{errors.notes}</span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -241,7 +263,12 @@ export function MeasurementForm({
             Cancel
           </Button>
         )}
-        <Button type="submit" isLoading={isSubmitting} className="flex-1">
+        <Button
+          type="submit"
+          isLoading={isSubmitting}
+          disabled={Object.keys(errors).length > 0 || isSubmitting}
+          className="flex-1"
+        >
           Save Measurement
         </Button>
       </div>

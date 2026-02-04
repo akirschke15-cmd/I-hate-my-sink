@@ -53,6 +53,7 @@ export interface Address {
 export interface SyncableEntity {
   localId?: string;
   syncedAt?: Date;
+  version?: number;
 }
 
 export interface PendingSync<T> {
@@ -62,4 +63,20 @@ export interface PendingSync<T> {
   data: T;
   createdAt: Date;
   retryCount: number;
+  lastAttempt?: Date;
+}
+
+// Conflict resolution types
+export interface Conflict<T = unknown> {
+  id: string;
+  type: 'customer' | 'measurement' | 'quote';
+  localData: T;
+  serverData: T;
+  createdAt: Date;
+}
+
+export interface ConflictResolution {
+  conflictId: string;
+  resolution: 'keep_local' | 'keep_server' | 'manual';
+  resolvedData?: unknown;
 }

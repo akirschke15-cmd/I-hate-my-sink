@@ -6,13 +6,31 @@ import { quotes, quoteLineItems, customers, measurements } from '@ihms/db/schema
 import { eq, desc, sql, and, asc } from 'drizzle-orm';
 import { generateQuoteNumber, calculateLineTotal, recalculateQuoteTotals } from './utils';
 import { createQuoteSchema, updateQuoteSchema, quoteStatuses } from './schemas';
+import { isSalesperson } from '../../utils/rbac';
+
+// State machine: valid quote status transitions
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ['sent'],
+  sent: ['viewed', 'expired'],
+  viewed: ['accepted', 'rejected', 'expired'],
+  accepted: [],
+  rejected: [],
+  expired: [],
+};
 
 export const quotesCrudRouter = router({
   // Create a new quote with line items
   create: protectedProcedure.input(createQuoteSchema).mutation(async ({ ctx, input }) => {
     // Verify customer exists and belongs to user's company
+    // For salespeople: also verify they are assigned to the customer
+    const conditions = [eq(customers.id, input.customerId), eq(customers.companyId, ctx.user.companyId)];
+
+    if (isSalesperson(ctx.user.role)) {
+      conditions.push(eq(customers.assignedUserId, ctx.user.userId));
+    }
+
     const customer = await db.query.customers.findFirst({
-      where: and(eq(customers.id, input.customerId), eq(customers.companyId, ctx.user.companyId)),
+      where: and(...conditions),
     });
 
     if (!customer) {
@@ -124,6 +142,10 @@ export const quotesCrudRouter = router({
       if (input.status) {
         conditions.push(eq(quotes.status, input.status));
       }
+      // If user is salesperson, only show quotes they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
       const whereClause = and(...conditions);
 
       const results = await db
@@ -181,8 +203,14 @@ export const quotesCrudRouter = router({
         });
       }
 
+      const conditions = [eq(quotes.customerId, input.customerId), eq(quotes.companyId, ctx.user.companyId)];
+      // If user is salesperson, only show quotes they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
+
       const results = await db.query.quotes.findMany({
-        where: and(eq(quotes.customerId, input.customerId), eq(quotes.companyId, ctx.user.companyId)),
+        where: and(...conditions),
         limit: input.limit,
         offset: input.offset,
         orderBy: [desc(quotes.createdAt)],
@@ -197,8 +225,14 @@ export const quotesCrudRouter = router({
     .query(async ({ ctx, input }) => {
       // Use Drizzle's relational query API with eager loading to fetch all data in a single query
       // This eliminates the N+1 query problem by using JOIN operations under the hood
+      const conditions = [eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)];
+      // If user is salesperson, only allow access to quotes they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
+
       const quote = await db.query.quotes.findFirst({
-        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
+        where: and(...conditions),
         with: {
           lineItems: {
             orderBy: [asc(quoteLineItems.sortOrder)],
@@ -220,10 +254,16 @@ export const quotesCrudRouter = router({
 
   // Update quote details
   update: protectedProcedure.input(updateQuoteSchema).mutation(async ({ ctx, input }) => {
-    const { id, ...updateData } = input;
+    const { id, version, ...updateData } = input;
+
+    const conditions = [eq(quotes.id, id), eq(quotes.companyId, ctx.user.companyId)];
+    // If user is salesperson, only allow updating quotes they created
+    if (isSalesperson(ctx.user.role)) {
+      conditions.push(eq(quotes.createdById, ctx.user.userId));
+    }
 
     const existing = await db.query.quotes.findFirst({
-      where: and(eq(quotes.id, id), eq(quotes.companyId, ctx.user.companyId)),
+      where: and(...conditions),
     });
 
     if (!existing) {
@@ -233,7 +273,21 @@ export const quotesCrudRouter = router({
       });
     }
 
+    // Check for version conflict
+    if (version !== undefined && version !== existing.version) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This record was modified by another user. Please refresh and try again.',
+        cause: {
+          serverVersion: existing.version,
+          clientVersion: version,
+          serverData: existing,
+        },
+      });
+    }
+
     const dbUpdateData: Record<string, unknown> = {
+      version: existing.version + 1,
       updatedAt: new Date(),
     };
 
@@ -275,14 +329,40 @@ export const quotesCrudRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const conditions = [eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)];
+      // If user is salesperson, only allow updating quotes they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
+
       const existing = await db.query.quotes.findFirst({
-        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
+        where: and(...conditions),
       });
 
       if (!existing) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Quote not found',
+        });
+      }
+
+      // Check if quote is expired before allowing transition to 'accepted'
+      if (input.status === 'accepted' && existing.validUntil) {
+        const now = new Date();
+        if (new Date(existing.validUntil) < now) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'This quote has expired and cannot be accepted',
+          });
+        }
+      }
+
+      // Validate status transition using state machine
+      const allowedNextStatuses = VALID_TRANSITIONS[existing.status] || [];
+      if (!allowedNextStatuses.includes(input.status)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Cannot transition quote from '${existing.status}' to '${input.status}'`,
         });
       }
 
@@ -302,8 +382,14 @@ export const quotesCrudRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      const conditions = [eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)];
+      // If user is salesperson, only allow deleting quotes they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
+
       const existing = await db.query.quotes.findFirst({
-        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
+        where: and(...conditions),
       });
 
       if (!existing) {
@@ -328,8 +414,14 @@ export const quotesCrudRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const conditions = [eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)];
+      // If user is salesperson, only allow signing quotes they created
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
+
       const existing = await db.query.quotes.findFirst({
-        where: and(eq(quotes.id, input.id), eq(quotes.companyId, ctx.user.companyId)),
+        where: and(...conditions),
       });
 
       if (!existing) {
@@ -344,6 +436,14 @@ export const quotesCrudRouter = router({
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Quote must be sent before it can be signed',
+        });
+      }
+
+      // Check if quote has expired
+      if (existing.validUntil && new Date(existing.validUntil) < new Date()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This quote has expired and cannot be signed',
         });
       }
 

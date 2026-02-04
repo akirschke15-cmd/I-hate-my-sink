@@ -28,8 +28,37 @@ export function createContext({ req }: CreateExpressContextOptions): Context {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+
+    // Validate payload structure
+    if (!payload.userId || !payload.companyId || !payload.role) {
+      console.warn('[AUTH] Invalid JWT payload structure - missing required fields', {
+        hasUserId: !!payload.userId,
+        hasCompanyId: !!payload.companyId,
+        hasRole: !!payload.role,
+      });
+      return { user: null };
+    }
+
+    // Validate role is a valid enum value
+    if (!['admin', 'salesperson'].includes(payload.role)) {
+      console.error('[SECURITY] Invalid role in JWT', {
+        role: payload.role,
+        userId: payload.userId,
+      });
+      return { user: null };
+    }
+
     return { user: payload };
-  } catch {
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      console.info('[AUTH] Expired token attempt');
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      console.warn('[SECURITY] Invalid JWT - possible tampering', {
+        error: error.message,
+      });
+    } else {
+      console.error('[AUTH] Unknown JWT verification error', { error });
+    }
     return { user: null };
   }
 }

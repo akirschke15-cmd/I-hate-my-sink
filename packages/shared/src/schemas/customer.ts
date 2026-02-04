@@ -19,6 +19,7 @@ export const createCustomerSchema = z.object({
 
 export const updateCustomerSchema = createCustomerSchema.partial().extend({
   id: z.string().uuid(),
+  version: z.number().int().positive().optional(),
 });
 
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;

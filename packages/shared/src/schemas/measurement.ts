@@ -55,6 +55,7 @@ export const measurementSchema = z.object({
 
 export const updateMeasurementSchema = measurementSchema.partial().extend({
   id: z.string().uuid('Invalid measurement ID'),
+  version: z.number().int().positive().optional(),
 });
 
 export type MeasurementInput = z.infer<typeof measurementSchema>;

@@ -17,10 +17,12 @@
     "@trpc/client": "^11.0.0",
     "@trpc/react-query": "^11.0.0",
     "idb": "^8.0.0",
+    "lucide-react": "^0.563.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^6.21.0"
+    "react-router-dom": "^6.21.0",
+    "workbox-window": "^7.4.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",

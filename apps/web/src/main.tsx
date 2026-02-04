@@ -7,6 +7,8 @@ import { trpc, createTRPCClient, isUnauthorizedError, clearAuthAndRedirect } fro
 import { AuthProvider } from './contexts/AuthContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import App from './App';
 import './index.css';
 
@@ -60,6 +62,8 @@ function Root() {
             <OfflineProvider>
               <AuthProvider>
                 <Toaster position="top-right" />
+                <PWAUpdatePrompt />
+                <PWAInstallPrompt />
                 <App />
               </AuthProvider>
             </OfflineProvider>

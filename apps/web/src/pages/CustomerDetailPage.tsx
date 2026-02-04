@@ -208,8 +208,8 @@ export function CustomerDetailPage() {
                           <div>
                             <span className="text-gray-500">Cabinet: </span>
                             <span className="text-gray-900">
-                              {measurement.cabinetWidthInches}" x {measurement.cabinetDepthInches}" x{' '}
-                              {measurement.cabinetHeightInches}"
+                              {measurement.cabinetWidthInches}&quot; x {measurement.cabinetDepthInches}&quot; x{' '}
+                              {measurement.cabinetHeightInches}&quot;
                             </span>
                           </div>
                           {measurement.countertopMaterial && (
@@ -224,7 +224,7 @@ export function CustomerDetailPage() {
                             <div>
                               <span className="text-gray-500">Thickness: </span>
                               <span className="text-gray-900">
-                                {measurement.countertopThicknessInches}"
+                                {measurement.countertopThicknessInches}&quot;
                               </span>
                             </div>
                           )}

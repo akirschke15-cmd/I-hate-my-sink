@@ -22,3 +22,6 @@ export const appRouter = router({
 export type AppRouter = typeof appRouter;
 
 export { createContext };
+
+// Export background jobs
+export { expireStaleQuotes } from './jobs/expire-quotes';
