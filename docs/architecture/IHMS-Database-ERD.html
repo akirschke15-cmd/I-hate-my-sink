@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IHMS Database ERD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .subtitle { color: #94a3b8; font-size: 1.1rem; }
+        .section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .section h2 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mermaid {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .db-access {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .access-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .access-card h3 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        .access-card code {
+            display: block;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 10px 0;
+            color: #a5f3fc;
+        }
+        .access-card p { color: #94a3b8; margin: 8px 0; font-size: 0.95rem; }
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .table-card {
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+        .table-header {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .table-header.green { background: linear-gradient(135deg, #22c55e, #15803d); }
+        .table-header.purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+        .table-header.yellow { background: linear-gradient(135deg, #f59e0b, #b45309); }
+        .table-header.pink { background: linear-gradient(135deg, #ec4899, #be185d); }
+        .table-header.cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .table-header.orange { background: linear-gradient(135deg, #f97316, #c2410c); }
+        .table-body { padding: 15px 20px; }
+        .column {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+        .column:last-child { border-bottom: none; }
+        .column-name { color: #f8fafc; font-family: monospace; }
+        .column-type { color: #94a3b8; font-size: 0.85rem; }
+        .column-key {
+            background: #fbbf24;
+            color: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .column-fk { background: #60a5fa; }
+        .enum-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .enum-values { color: #a78bfa; font-size: 0.8rem; font-style: italic; }
+        .copy-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        .copy-btn:hover { background: #2563eb; }
+        .stats {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .stat {
+            text-align: center;
+            padding: 20px 40px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+        }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #60a5fa; }
+        .stat-label { color: #94a3b8; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IHMS Database Schema</h1>
+            <p class="subtitle">Entity Relationship Diagram | PostgreSQL 16</p>
+            <div class="stats">
+                <div class="stat"><div class="stat-value">8</div><div class="stat-label">Tables</div></div>
+                <div class="stat"><div class="stat-value">7</div><div class="stat-label">Enums</div></div>
+                <div class="stat"><div class="stat-value">12</div><div class="stat-label">Foreign Keys</div></div>
+            </div>
+        </header>
+
+        <!-- Full ERD -->
+        <section class="section">
+            <h2>Complete Entity Relationship Diagram</h2>
+            <div class="mermaid">
+erDiagram
+    COMPANIES {
+        uuid id PK
+        varchar name "NOT NULL"
+        varchar slug UK "NOT NULL"
+        varchar email
+        varchar phone
+        text address
+        text logo_url
+        boolean is_active "DEFAULT true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    USERS {
+        uuid id PK
+        uuid company_id FK "NOT NULL"
+        varchar email UK "NOT NULL"
+        text password_hash "NOT NULL"
+        varchar first_name "NOT NULL"
+        varchar last_name "NOT NULL"
+        user_role role "DEFAULT salesperson"
+        varchar phone
+        boolean is_active "DEFAULT true"
+        timestamp last_login_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    CUSTOMERS {
+        uuid id PK
+        uuid company_id FK "NOT NULL"
+        uuid assigned_user_id FK
+        varchar first_name "NOT NULL"
+        varchar last_name "NOT NULL"
+        varchar email
+        varchar phone
+        jsonb address "street city state zip"
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SINKS {
+        uuid id PK
+        uuid company_id FK "NOT NULL"
+        varchar sku "NOT NULL"
+        varchar name "NOT NULL"
+        text description
+        sink_material material "NOT NULL"
+        sink_mounting_style mounting_style "NOT NULL"
+        decimal width_inches "NOT NULL"
+        decimal depth_inches "NOT NULL"
+        decimal height_inches "NOT NULL"
+        integer bowl_count "DEFAULT 1"
+        decimal base_price "NOT NULL"
+        decimal labor_cost "DEFAULT 0"
+        text image_url
+        boolean is_active "DEFAULT true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    MEASUREMENTS {
+        uuid id PK
+        uuid company_id FK "NOT NULL"
+        uuid customer_id FK "NOT NULL"
+        uuid created_by_id FK "NOT NULL"
+        decimal cabinet_width_inches "NOT NULL"
+        decimal cabinet_depth_inches "NOT NULL"
+        decimal cabinet_height_inches "NOT NULL"
+        countertop_material countertop_material
+        decimal countertop_thickness_inches
+        decimal countertop_overhang_front_inches
+        decimal countertop_overhang_sides_inches
+        mounting_style mounting_style
+        integer faucet_hole_count
+        varchar faucet_hole_spacing
+        decimal existing_sink_width_inches
+        decimal existing_sink_depth_inches
+        integer existing_sink_bowl_count
+        decimal backsplash_height_inches
+        decimal window_clearance_inches
+        decimal plumbing_centerline_from_left
+        boolean garbage_disposal
+        boolean dishwasher_air_gap
+        jsonb photos "string array"
+        text notes
+        varchar location
+        varchar local_id "offline sync"
+        timestamp synced_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    QUOTES {
+        uuid id PK
+        uuid company_id FK "NOT NULL"
+        uuid customer_id FK "NOT NULL"
+        uuid measurement_id FK
+        uuid created_by_id FK "NOT NULL"
+        varchar quote_number UK "NOT NULL"
+        quote_status status "DEFAULT draft"
+        decimal subtotal "DEFAULT 0"
+        decimal tax_rate "DEFAULT 0"
+        decimal tax_amount "DEFAULT 0"
+        decimal discount_amount "DEFAULT 0"
+        decimal total "DEFAULT 0"
+        text signature_url
+        timestamp signed_at
+        timestamp emailed_at
+        integer email_count "DEFAULT 0"
+        varchar workiz_job_id
+        text workiz_job_url
+        timestamp workiz_synced_at
+        timestamp valid_until
+        text notes
+        varchar local_id "offline sync"
+        timestamp synced_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    QUOTE_LINE_ITEMS {
+        uuid id PK
+        uuid quote_id FK "NOT NULL"
+        uuid sink_id FK
+        line_item_type type "DEFAULT product"
+        varchar name "NOT NULL"
+        text description
+        varchar sku
+        integer quantity "DEFAULT 1"
+        decimal unit_price "NOT NULL"
+        decimal discount_percent "DEFAULT 0"
+        decimal line_total "NOT NULL"
+        integer sort_order "DEFAULT 0"
+    }
+
+    EMAIL_LOGS {
+        uuid id PK
+        uuid quote_id FK "NOT NULL"
+        uuid sent_by_id FK "NOT NULL"
+        varchar recipient_email "NOT NULL"
+        varchar recipient_name
+        varchar subject "NOT NULL"
+        email_status status "DEFAULT pending"
+        varchar resend_message_id
+        text error_message
+        timestamp sent_at
+        timestamp created_at
+    }
+
+    COMPANIES ||--o{ USERS : "employs"
+    COMPANIES ||--o{ CUSTOMERS : "has"
+    COMPANIES ||--o{ SINKS : "catalogs"
+    COMPANIES ||--o{ MEASUREMENTS : "owns"
+    COMPANIES ||--o{ QUOTES : "generates"
+
+    USERS ||--o{ CUSTOMERS : "assigned_to"
+    USERS ||--o{ MEASUREMENTS : "created_by"
+    USERS ||--o{ QUOTES : "created_by"
+    USERS ||--o{ EMAIL_LOGS : "sent_by"
+
+    CUSTOMERS ||--o{ MEASUREMENTS : "has"
+    CUSTOMERS ||--o{ QUOTES : "receives"
+
+    MEASUREMENTS ||--o{ QUOTES : "referenced_in"
+
+    QUOTES ||--o{ QUOTE_LINE_ITEMS : "contains"
+    QUOTES ||--o{ EMAIL_LOGS : "tracked_by"
+
+    SINKS ||--o{ QUOTE_LINE_ITEMS : "included_in"
+            </div>
+        </section>
+
+        <!-- Database Access -->
+        <section class="section">
+            <h2>Database Access Methods</h2>
+            <div class="db-access">
+                <div class="access-card">
+                    <h3>1. Drizzle Studio (Recommended)</h3>
+                    <p>Visual database browser with query editor</p>
+                    <code>pnpm db:studio</code>
+                    <p>Opens at <strong>https://local.drizzle.studio</strong></p>
+                </div>
+
+                <div class="access-card">
+                    <h3>2. psql Command Line</h3>
+                    <p>Direct PostgreSQL CLI access</p>
+                    <code>docker exec -it ihms-postgres psql -U ihms -d ihms</code>
+                    <p>Or connect externally:</p>
+                    <code>psql -h localhost -p 5433 -U ihms -d ihms</code>
+                    <p>Password: <strong>ihms</strong></p>
+                </div>
+
+                <div class="access-card">
+                    <h3>3. Connection String</h3>
+                    <p>For any PostgreSQL client (DBeaver, pgAdmin, TablePlus)</p>
+                    <code>postgresql://ihms:ihms@localhost:5433/ihms</code>
+                </div>
+
+                <div class="access-card">
+                    <h3>4. Docker Desktop</h3>
+                    <p>View container logs and shell access</p>
+                    <code>docker logs ihms-postgres</code>
+                    <code>docker exec -it ihms-postgres bash</code>
+                </div>
+
+                <div class="access-card">
+                    <h3>5. VS Code Extension</h3>
+                    <p>Install "PostgreSQL" by Chris Kolkman</p>
+                    <code>Host: localhost
+Port: 5433
+User: ihms
+Password: ihms
+Database: ihms</code>
+                </div>
+
+                <div class="access-card">
+                    <h3>6. Quick Queries</h3>
+                    <p>Common inspection commands:</p>
+                    <code># List all tables
+\dt
+
+# Describe a table
+\d quotes
+
+# Count rows
+SELECT COUNT(*) FROM customers;</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- Table Details -->
+        <section class="section">
+            <h2>Table Specifications</h2>
+            <div class="table-grid">
+                <!-- Companies -->
+                <div class="table-card">
+                    <div class="table-header">companies</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">name</span><span class="column-type">varchar(255)</span></div>
+                        <div class="column"><span class="column-name">slug</span><span class="column-type">varchar(100) UNIQUE</span></div>
+                        <div class="column"><span class="column-name">email</span><span class="column-type">varchar(255)</span></div>
+                        <div class="column"><span class="column-name">phone</span><span class="column-type">varchar(50)</span></div>
+                        <div class="column"><span class="column-name">address</span><span class="column-type">text</span></div>
+                        <div class="column"><span class="column-name">logo_url</span><span class="column-type">text</span></div>
+                        <div class="column"><span class="column-name">is_active</span><span class="column-type">boolean</span></div>
+                        <div class="column"><span class="column-name">created_at</span><span class="column-type">timestamptz</span></div>
+                        <div class="column"><span class="column-name">updated_at</span><span class="column-type">timestamptz</span></div>
+                    </div>
+                </div>
+
+                <!-- Users -->
+                <div class="table-card">
+                    <div class="table-header green">users</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">company_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">email</span><span class="column-type">varchar(255) UNIQUE</span></div>
+                        <div class="column"><span class="column-name">password_hash</span><span class="column-type">text</span></div>
+                        <div class="column"><span class="column-name">first_name</span><span class="column-type">varchar(100)</span></div>
+                        <div class="column"><span class="column-name">last_name</span><span class="column-type">varchar(100)</span></div>
+                        <div class="column"><span class="column-name">role</span><span class="column-type">user_role</span></div>
+                        <div class="column"><span class="column-name">phone</span><span class="column-type">varchar(50)</span></div>
+                        <div class="column"><span class="column-name">is_active</span><span class="column-type">boolean</span></div>
+                        <div class="column"><span class="column-name">last_login_at</span><span class="column-type">timestamptz</span></div>
+                        <div class="enum-section">
+                            <span class="enum-values">user_role: admin | salesperson</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customers -->
+                <div class="table-card">
+                    <div class="table-header purple">customers</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">company_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">assigned_user_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">first_name</span><span class="column-type">varchar(100)</span></div>
+                        <div class="column"><span class="column-name">last_name</span><span class="column-type">varchar(100)</span></div>
+                        <div class="column"><span class="column-name">email</span><span class="column-type">varchar(255)</span></div>
+                        <div class="column"><span class="column-name">phone</span><span class="column-type">varchar(50)</span></div>
+                        <div class="column"><span class="column-name">address</span><span class="column-type">jsonb</span></div>
+                        <div class="column"><span class="column-name">notes</span><span class="column-type">text</span></div>
+                    </div>
+                </div>
+
+                <!-- Sinks -->
+                <div class="table-card">
+                    <div class="table-header yellow">sinks</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">company_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">sku</span><span class="column-type">varchar(100)</span></div>
+                        <div class="column"><span class="column-name">name</span><span class="column-type">varchar(255)</span></div>
+                        <div class="column"><span class="column-name">material</span><span class="column-type">sink_material</span></div>
+                        <div class="column"><span class="column-name">mounting_style</span><span class="column-type">sink_mounting_style</span></div>
+                        <div class="column"><span class="column-name">width_inches</span><span class="column-type">decimal(6,2)</span></div>
+                        <div class="column"><span class="column-name">depth_inches</span><span class="column-type">decimal(6,2)</span></div>
+                        <div class="column"><span class="column-name">height_inches</span><span class="column-type">decimal(6,2)</span></div>
+                        <div class="column"><span class="column-name">bowl_count</span><span class="column-type">integer</span></div>
+                        <div class="column"><span class="column-name">base_price</span><span class="column-type">decimal(10,2)</span></div>
+                        <div class="column"><span class="column-name">labor_cost</span><span class="column-type">decimal(10,2)</span></div>
+                        <div class="enum-section">
+                            <span class="enum-values">material: stainless_steel | granite_composite | cast_iron | fireclay | copper | porcelain</span><br>
+                            <span class="enum-values">mounting: undermount | drop_in | farmhouse | flush_mount</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Measurements -->
+                <div class="table-card">
+                    <div class="table-header pink">measurements</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">company_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">customer_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">created_by_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">cabinet_width_inches</span><span class="column-type">decimal(6,2)</span></div>
+                        <div class="column"><span class="column-name">cabinet_depth_inches</span><span class="column-type">decimal(6,2)</span></div>
+                        <div class="column"><span class="column-name">cabinet_height_inches</span><span class="column-type">decimal(6,2)</span></div>
+                        <div class="column"><span class="column-name">countertop_material</span><span class="column-type">countertop_material</span></div>
+                        <div class="column"><span class="column-name">mounting_style</span><span class="column-type">mounting_style</span></div>
+                        <div class="column"><span class="column-name">faucet_hole_count</span><span class="column-type">integer</span></div>
+                        <div class="column"><span class="column-name">photos</span><span class="column-type">jsonb[]</span></div>
+                        <div class="column"><span class="column-name">local_id</span><span class="column-type">varchar (sync)</span></div>
+                        <div class="enum-section">
+                            <span class="enum-values">countertop: granite | quartz | marble | laminate | solid_surface | butcher_block | concrete | tile | stainless_steel | other</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quotes -->
+                <div class="table-card">
+                    <div class="table-header cyan">quotes</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">company_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">customer_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">measurement_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">created_by_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">quote_number</span><span class="column-type">varchar(50) UNIQUE</span></div>
+                        <div class="column"><span class="column-name">status</span><span class="column-type">quote_status</span></div>
+                        <div class="column"><span class="column-name">subtotal</span><span class="column-type">decimal(10,2)</span></div>
+                        <div class="column"><span class="column-name">tax_rate</span><span class="column-type">decimal(5,4)</span></div>
+                        <div class="column"><span class="column-name">total</span><span class="column-type">decimal(10,2)</span></div>
+                        <div class="column"><span class="column-name">signature_url</span><span class="column-type">text (base64)</span></div>
+                        <div class="column"><span class="column-name">signed_at</span><span class="column-type">timestamptz</span></div>
+                        <div class="enum-section">
+                            <span class="enum-values">status: draft | sent | viewed | accepted | rejected | expired</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quote Line Items -->
+                <div class="table-card">
+                    <div class="table-header orange">quote_line_items</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">quote_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">sink_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">type</span><span class="column-type">line_item_type</span></div>
+                        <div class="column"><span class="column-name">name</span><span class="column-type">varchar(255)</span></div>
+                        <div class="column"><span class="column-name">description</span><span class="column-type">text</span></div>
+                        <div class="column"><span class="column-name">sku</span><span class="column-type">varchar(100)</span></div>
+                        <div class="column"><span class="column-name">quantity</span><span class="column-type">integer</span></div>
+                        <div class="column"><span class="column-name">unit_price</span><span class="column-type">decimal(10,2)</span></div>
+                        <div class="column"><span class="column-name">discount_percent</span><span class="column-type">decimal(5,2)</span></div>
+                        <div class="column"><span class="column-name">line_total</span><span class="column-type">decimal(10,2)</span></div>
+                        <div class="enum-section">
+                            <span class="enum-values">type: product | labor | material | other</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Logs -->
+                <div class="table-card">
+                    <div class="table-header">email_logs</div>
+                    <div class="table-body">
+                        <div class="column"><span class="column-name">id</span><span><span class="column-key">PK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">quote_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">sent_by_id</span><span><span class="column-key column-fk">FK</span> uuid</span></div>
+                        <div class="column"><span class="column-name">recipient_email</span><span class="column-type">varchar(255)</span></div>
+                        <div class="column"><span class="column-name">recipient_name</span><span class="column-type">varchar(255)</span></div>
+                        <div class="column"><span class="column-name">subject</span><span class="column-type">varchar(500)</span></div>
+                        <div class="column"><span class="column-name">status</span><span class="column-type">email_status</span></div>
+                        <div class="column"><span class="column-name">resend_message_id</span><span class="column-type">varchar(100)</span></div>
+                        <div class="column"><span class="column-name">error_message</span><span class="column-type">text</span></div>
+                        <div class="enum-section">
+                            <span class="enum-values">status: pending | sent | delivered | failed | bounced</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Reference -->
+        <section class="section">
+            <h2>Quick Reference Queries</h2>
+            <div class="db-access">
+                <div class="access-card">
+                    <h3>View All Customers with Quotes</h3>
+                    <code>SELECT c.first_name, c.last_name,
+       COUNT(q.id) as quote_count,
+       SUM(q.total) as total_value
+FROM customers c
+LEFT JOIN quotes q ON c.id = q.customer_id
+GROUP BY c.id
+ORDER BY total_value DESC;</code>
+                </div>
+
+                <div class="access-card">
+                    <h3>Recent Measurements</h3>
+                    <code>SELECT m.*, c.first_name, c.last_name
+FROM measurements m
+JOIN customers c ON m.customer_id = c.id
+ORDER BY m.created_at DESC
+LIMIT 10;</code>
+                </div>
+
+                <div class="access-card">
+                    <h3>Quote Pipeline by Status</h3>
+                    <code>SELECT status,
+       COUNT(*) as count,
+       SUM(total) as total_value
+FROM quotes
+GROUP BY status
+ORDER BY
+  CASE status
+    WHEN 'draft' THEN 1
+    WHEN 'sent' THEN 2
+    WHEN 'viewed' THEN 3
+    WHEN 'accepted' THEN 4
+  END;</code>
+                </div>
+
+                <div class="access-card">
+                    <h3>Popular Sink Materials</h3>
+                    <code>SELECT material,
+       COUNT(*) as count,
+       AVG(base_price) as avg_price
+FROM sinks
+WHERE is_active = true
+GROUP BY material
+ORDER BY count DESC;</code>
+                </div>
+            </div>
+        </section>
+
+        <footer style="text-align: center; padding: 40px; color: #64748b;">
+            <p>IHMS Database ERD | PostgreSQL 16 + Drizzle ORM</p>
+            <p style="margin-top: 10px;">Connection: postgresql://ihms:ihms@localhost:5433/ihms</p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'neutral',
+            er: {
+                useMaxWidth: false,
+                layoutDirection: 'TB'
+            }
+        });
+    </script>
+</body>
+</html>

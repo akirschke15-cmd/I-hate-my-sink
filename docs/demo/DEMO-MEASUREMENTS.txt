@@ -1,0 +1,200 @@
+================================================================================
+                    IHMS DEMO - SINK MEASUREMENTS CHEAT SHEET
+================================================================================
+
+These measurement values will yield actual sink matches from the demo catalog.
+
+
+--------------------------------------------------------------------------------
+MEASUREMENT 1: STANDARD KITCHEN (Many Matches)
+--------------------------------------------------------------------------------
+Best for: Showing multiple options to customer
+
+  Cabinet Width:          36"
+  Cabinet Depth:          24"
+  Cabinet Height:         34"
+  Countertop Material:    granite (or quartz)
+  Countertop Thickness:   1.5"
+  Mounting Style:         undermount
+  Existing Bowl Count:    1
+
+Expected matches: 8-10 sinks (most undermount + drop-in options up to 33")
+
+
+--------------------------------------------------------------------------------
+MEASUREMENT 2: LARGE CABINET (Farmhouse Sink)
+--------------------------------------------------------------------------------
+Best for: Showcasing premium farmhouse options
+
+  Cabinet Width:          39"
+  Cabinet Depth:          25"
+  Cabinet Height:         34"
+  Countertop Material:    quartz
+  Countertop Thickness:   1.5"
+  Mounting Style:         farmhouse
+  Existing Bowl Count:    1
+
+Expected matches: All farmhouse sinks including 36" Modern Steel Farmhouse
+
+
+--------------------------------------------------------------------------------
+MEASUREMENT 3: COMPACT KITCHEN (Budget-Friendly)
+--------------------------------------------------------------------------------
+Best for: Smaller, more affordable options
+
+  Cabinet Width:          30"
+  Cabinet Depth:          22"
+  Cabinet Height:         34"
+  Countertop Material:    laminate
+  Countertop Thickness:   1.25"
+  Mounting Style:         drop_in
+  Existing Bowl Count:    1
+
+Expected matches: Classic Drop-In 25", Victorian Porcelain Drop-In 25"
+
+
+--------------------------------------------------------------------------------
+MEASUREMENT 4: DOUBLE BOWL REQUEST
+--------------------------------------------------------------------------------
+Best for: Customer wants a double-bowl sink
+
+  Cabinet Width:          36"
+  Cabinet Depth:          24"
+  Cabinet Height:         34"
+  Countertop Material:    granite
+  Countertop Thickness:   1.5"
+  Mounting Style:         undermount
+  Existing Bowl Count:    2
+
+Expected matches: ProChef Double Bowl 33", Stone Gray Double Bowl 33", etc.
+
+
+--------------------------------------------------------------------------------
+MEASUREMENT 5: MAXIMUM RESULTS (All 20 Sinks)
+--------------------------------------------------------------------------------
+Best for: Showing the FULL catalog - matches every sink
+
+  Cabinet Width:          40"
+  Cabinet Depth:          26"
+  Cabinet Height:         34"
+  Countertop Material:    quartz
+  Countertop Thickness:   1.5"
+  Mounting Style:         (leave blank - no preference)
+  Existing Bowl Count:    (leave blank - no preference)
+
+Expected matches: ALL 20 SINKS in catalog
+
+Why this works:
+  - 40" width fits largest sink (36") with 4" clearance
+  - 26" depth fits deepest sink (22") with 4" clearance
+  - No mounting style preference = no penalty for any style
+  - No bowl count preference = all bowl counts score equally
+
+
+================================================================================
+                         QUICK REFERENCE - SINK CATALOG
+================================================================================
+
+SINK DIMENSIONS BY MOUNTING STYLE:
+
+  Mounting Style    |  Widths Available   |  Depths Available
+  ------------------|---------------------|-------------------
+  Undermount        |  28", 30", 32", 33" |  18", 19", 22"
+  Drop-in           |  25", 33"           |  20", 22"
+  Farmhouse         |  30", 33", 36"      |  18", 20"
+  Flush Mount       |  30", 32"           |  18", 19"
+
+
+FITTING FORMULA:
+
+  - Cabinet width should be AT LEAST 4" wider than sink width
+  - Cabinet depth should be AT LEAST 3" deeper than sink depth
+  - This yields "excellent" fit ratings in the matching algorithm
+
+
+AVAILABLE MATERIALS:
+
+  - stainless_steel
+  - granite_composite
+  - fireclay
+  - cast_iron
+  - copper
+  - porcelain
+
+
+COUNTERTOP MATERIALS (for form dropdowns):
+
+  - granite
+  - quartz
+  - marble
+  - laminate
+  - solid_surface
+  - butcher_block
+  - concrete
+  - tile
+  - stainless_steel
+
+
+================================================================================
+                              DEMO TIPS
+================================================================================
+
+1. Start with Measurement 1 (Standard Kitchen) - shows the most results
+
+2. For price variety, the catalog ranges from:
+   - Budget:  $199.99 (Classic Drop-In 25")
+   - Mid:     $449.99 (ProChef Double Bowl 33")
+   - Premium: $1,299.99 (Artisan Copper Farmhouse 30")
+
+3. Avoid creating quotes while offline during demo
+
+4. The matching algorithm scores based on:
+   - Width fit (30 points max)
+   - Depth fit (30 points max)
+   - Mounting style match (25 points max)
+   - Bowl count match (15 points max)
+
+
+================================================================================
+                            SAFE DEMO PATH
+================================================================================
+
+RECOMMENDED FLOW (works reliably):
+
+  1. LOGIN
+     -> Dashboard loads with analytics charts
+
+  2. CREATE/VIEW CUSTOMERS
+     -> Show customer list
+     -> Create a new customer (form validation demo)
+
+  3. CREATE MEASUREMENT
+     -> Use Measurement 5 (40" x 26") for maximum results
+     -> Show form validation on required fields
+
+  4. BROWSE SINK CATALOG
+     -> Match measurement to sinks
+     -> Show filtering options (material, mounting style)
+     -> Highlight price range variety
+
+  5. GENERATE QUOTE
+     -> Select a sink from matches
+     -> Add line items (product, labor, materials)
+     -> Show quote summary with totals
+
+  6. RESPONSIVE DESIGN (optional)
+     -> Resize browser window OR
+     -> Use DevTools device mode (F12 -> toggle device toolbar)
+
+
+--------------------------------------------------------------------------------
+                         AVOID DURING DEMO
+--------------------------------------------------------------------------------
+
+  X  Password reset flow (email service not configured)
+  X  Creating quotes while OFFLINE
+  X  Workiz integration features (stubbed/not implemented)
+  X  Opening browser DevTools in front of audience (console.logs visible)
+
+
+================================================================================

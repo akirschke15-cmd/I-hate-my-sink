@@ -1,0 +1,394 @@
+================================================================================
+                      IHMS SINK MATCHING ALGORITHM
+================================================================================
+
+Source: packages/api/src/routers/sinks.ts
+
+
+================================================================================
+                              OVERVIEW
+================================================================================
+
+The algorithm scores each sink against a measurement on a 100-POINT SCALE,
+then ranks them by score. Sinks with negative scores are disqualified.
+
+Final results are sorted by score (highest first) and limited by the
+requested result count.
+
+
+================================================================================
+                         SCORING BREAKDOWN
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. WIDTH FIT (Maximum 30 points)
+--------------------------------------------------------------------------------
+
+Formula:
+  Available Width = Cabinet Width - (2 x Side Overhang)
+  Width Clearance = Available Width - Sink Width
+
+Scoring:
+  +-------------------------------+--------+----------------------------------------+
+  | Clearance                     | Points | Message                                |
+  +-------------------------------+--------+----------------------------------------+
+  | >= 6" (optimal x 2)           |   30   | Excellent width fit with optimal       |
+  |                               |        | clearance                              |
+  +-------------------------------+--------+----------------------------------------+
+  | >= 4" (minimum x 2)           |   20   | Good width fit with adequate clearance |
+  +-------------------------------+--------+----------------------------------------+
+  | >= 0"                         |   10   | Tight width fit - may require careful  |
+  |                               |        | installation                           |
+  +-------------------------------+--------+----------------------------------------+
+  | < 0" (sink too wide)          |  -50   | WARNING: Sink too wide for cabinet     |
+  |                               |        | ** DISQUALIFIED **                     |
+  +-------------------------------+--------+----------------------------------------+
+
+
+--------------------------------------------------------------------------------
+2. DEPTH FIT (Maximum 30 points)
+--------------------------------------------------------------------------------
+
+Formula:
+  Available Depth = Cabinet Depth - Front Overhang
+  Depth Clearance = Available Depth - Sink Depth
+
+Scoring:
+  +-------------------------------+--------+----------------------------------------+
+  | Clearance                     | Points | Message                                |
+  +-------------------------------+--------+----------------------------------------+
+  | >= 3" (optimal)               |   30   | Excellent depth fit with optimal       |
+  |                               |        | clearance                              |
+  +-------------------------------+--------+----------------------------------------+
+  | >= 2" (minimum)               |   20   | Good depth fit with adequate clearance |
+  +-------------------------------+--------+----------------------------------------+
+  | >= 0"                         |   10   | Tight depth fit - may require careful  |
+  |                               |        | installation                           |
+  +-------------------------------+--------+----------------------------------------+
+  | < 0" (sink too deep)          |  -50   | WARNING: Sink too deep for cabinet     |
+  |                               |        | ** DISQUALIFIED **                     |
+  +-------------------------------+--------+----------------------------------------+
+
+
+--------------------------------------------------------------------------------
+3. MOUNTING STYLE MATCH (Maximum 25 points)
+--------------------------------------------------------------------------------
+
+Scoring:
+  +-------------------------------+--------+----------------------------------------+
+  | Condition                     | Points | Message                                |
+  +-------------------------------+--------+----------------------------------------+
+  | Exact match                   |   25   | Matches preferred mounting style       |
+  +-------------------------------+--------+----------------------------------------+
+  | Compatible styles             |   15   | Compatible mounting style (may require |
+  | (drop_in <-> flush_mount)     |        | adjustment)                            |
+  +-------------------------------+--------+----------------------------------------+
+  | Different style               |    5   | Different mounting style               |
+  +-------------------------------+--------+----------------------------------------+
+  | No preference specified       |   15   | No mounting style preference specified |
+  +-------------------------------+--------+----------------------------------------+
+
+Undermount Penalty:
+  If sink is undermount AND width clearance < 5" (4" min + 0.5" clips each side):
+    -> Subtract 5 points
+    -> Message: "Undermount may need extra width clearance for clips"
+
+
+--------------------------------------------------------------------------------
+4. BOWL COUNT MATCH (Maximum 15 points)
+--------------------------------------------------------------------------------
+
+Scoring:
+  +-------------------------------+--------+----------------------------------------+
+  | Condition                     | Points | Message                                |
+  +-------------------------------+--------+----------------------------------------+
+  | Exact match                   |   15   | Matches existing bowl count            |
+  +-------------------------------+--------+----------------------------------------+
+  | Differs by 1                  |    8   | Bowl count differs by 1                |
+  +-------------------------------+--------+----------------------------------------+
+  | Differs by 2+                 |    3   | Different bowl count                   |
+  +-------------------------------+--------+----------------------------------------+
+  | No existing sink specified    |   10   | (no message - neutral score)           |
+  +-------------------------------+--------+----------------------------------------+
+
+
+================================================================================
+                         FIT RATING THRESHOLDS
+================================================================================
+
+  +------------------+------------------+
+  | Total Score      | Fit Rating       |
+  +------------------+------------------+
+  | >= 80 points     | EXCELLENT        |
+  +------------------+------------------+
+  | >= 50 points     | GOOD             |
+  +------------------+------------------+
+  | < 50 points      | MARGINAL         |
+  +------------------+------------------+
+
+
+================================================================================
+                         PRE-FILTER QUERY
+================================================================================
+
+Before scoring, the database query filters to ONLY include sinks where:
+
+  1. sink.widthInches  <= cabinet.widthInches   (fits width-wise)
+  2. sink.depthInches  <= cabinet.depthInches   (fits depth-wise)
+  3. sink.isActive     = true                   (not discontinued)
+  4. sink.companyId    = user.companyId         (same company)
+
+This pre-filter reduces the candidate pool before the scoring algorithm runs.
+
+
+================================================================================
+                       CLEARANCE CONSTANTS (inches)
+================================================================================
+
+  MIN_CABINET_CLEARANCE      = 2.0    Minimum from sink edge to cabinet edge
+  OPTIMAL_CABINET_CLEARANCE  = 3.0    Optimal clearance for easy installation
+  UNDERMOUNT_EXTRA_CLEARANCE = 0.5    Extra clearance needed for undermount clips
+
+
+================================================================================
+                          EXAMPLE SCORING
+================================================================================
+
+MEASUREMENT INPUT:
+  Cabinet Width:     40"
+  Cabinet Depth:     26"
+  Mounting Style:    undermount
+  Existing Bowls:    1
+
+SINK BEING SCORED:
+  Name:              ProChef Undermount 32"
+  Width:             32"
+  Depth:             18"
+  Mounting Style:    undermount
+  Bowl Count:        1
+
+CALCULATION:
+
+  Width Clearance:   40" - 32" = 8"
+    -> 8" >= 6" (optimal x 2)
+    -> Score: +30 points
+    -> "Excellent width fit with optimal clearance"
+
+  Depth Clearance:   26" - 18" = 8"
+    -> 8" >= 3" (optimal)
+    -> Score: +30 points
+    -> "Excellent depth fit with optimal clearance"
+
+  Mounting Style:    undermount == undermount
+    -> Exact match
+    -> Score: +25 points
+    -> "Matches preferred mounting style: undermount"
+    -> No clip penalty (8" clearance >= 5" required)
+
+  Bowl Count:        1 == 1
+    -> Exact match
+    -> Score: +15 points
+    -> "Matches existing bowl count: 1"
+
+  ─────────────────────────────────────────────────────────────────────────────
+  TOTAL SCORE:       30 + 30 + 25 + 15 = 100 points
+  FIT RATING:        EXCELLENT (>= 80)
+  ─────────────────────────────────────────────────────────────────────────────
+
+
+================================================================================
+                     WHY SOME SINKS DON'T MATCH
+================================================================================
+
+  1. FILTERED IN QUERY (never scored):
+     - Sink wider than cabinet width
+     - Sink deeper than cabinet depth
+     - Sink is inactive (discontinued)
+     - Sink belongs to different company
+
+  2. FILTERED AFTER SCORING:
+     - Total score <= 0 (disqualified by negative width/depth fit)
+
+  3. FILTERED BY LIMIT:
+     - Results are limited to requested count (default varies)
+     - Only top N scores are returned
+
+
+================================================================================
+                        MAXIMUM POSSIBLE SCORE
+================================================================================
+
+  Width fit:         30 points
+  Depth fit:         30 points
+  Mounting style:    25 points
+  Bowl count:        15 points
+  ────────────────────────────
+  MAXIMUM:          100 points
+
+
+================================================================================
+                      MINIMUM VIABLE SCORE
+================================================================================
+
+  To appear in results, a sink must have score > 0
+
+  Worst passing scenario:
+    Width:   10 (tight fit)
+    Depth:   10 (tight fit)
+    Style:    5 (different)
+    Bowls:    3 (differs by 2+)
+    ────────────────────────────
+    TOTAL:   28 points (MARGINAL rating, but still shown)
+
+
+================================================================================
+                     ALGORITHM DESIGN RATIONALE
+================================================================================
+
+The algorithm was designed based on REAL-WORLD SINK INSTALLATION CONSTRAINTS
+and SALES PRIORITIZATION LOGIC.
+
+
+--------------------------------------------------------------------------------
+WHY WIDTH & DEPTH FIT ARE WEIGHTED HIGHEST (60 points combined)
+--------------------------------------------------------------------------------
+
+A sink that physically doesn't fit is a NON-STARTER - it's the most critical
+constraint. Installation clearance is required for:
+
+  - Mounting hardware and clips
+  - Plumber access to connections
+  - Preventing cabinet damage during install
+
+Why the specific clearances:
+
+  2" minimum    -> Industry standard for basic installation access
+  3" optimal    -> Allows comfortable working room, recommended by installers
+  0.5" extra    -> Undermount clips need lateral space to secure to countertop
+
+Why negative scoring (-50):
+
+  Disqualifies impossible fits immediately rather than showing them as
+  "poor matches" - saves time for both salesperson and customer.
+
+
+--------------------------------------------------------------------------------
+WHY MOUNTING STYLE IS SECOND HIGHEST (25 points)
+--------------------------------------------------------------------------------
+
+Mounting style affects:
+
+  - Installation complexity and cost
+  - Countertop modification requirements
+  - Final aesthetic appearance
+  - Customer expectations
+
+Why compatible styles (drop_in <-> flush_mount) get partial credit:
+
+  These are technically interchangeable with minor adjustments. Better to
+  show a viable alternative than return no results.
+
+Why "no preference" gets 15 points (neutral):
+
+  Doesn't penalize or reward - keeps all options visible when customer
+  is undecided about mounting style.
+
+
+--------------------------------------------------------------------------------
+WHY BOWL COUNT IS WEIGHTED LOWEST (15 points)
+--------------------------------------------------------------------------------
+
+Bowl count is a PREFERENCE, not a physical constraint:
+
+  - Customers often change their mind when they see options
+  - A salesperson can upsell/downsell based on use case
+  - Single vs double is a lifestyle choice, not a hard requirement
+
+Why partial credit for "differs by 1":
+
+  - Single <-> Double is a common consideration
+  - Customer with 1 bowl might want upgrade to 2 for convenience
+  - Customer with 2 bowls might prefer larger single for big pots
+
+
+--------------------------------------------------------------------------------
+WHY THE FIT RATING THRESHOLDS (80/50)
+--------------------------------------------------------------------------------
+
+80 points for "EXCELLENT":
+
+  Requires strong scores in at least 3 of 4 categories.
+  Signals "recommended without reservation" to salesperson.
+
+50 points for "GOOD":
+
+  Allows for 1-2 compromises (style mismatch, tight fit).
+  Still a viable sale with proper explanation to customer.
+
+Below 50 points is "MARGINAL":
+
+  Multiple concerns that salesperson should address upfront.
+  Still shown because it might be the only available option.
+
+
+--------------------------------------------------------------------------------
+DESIGN PHILOSOPHY
+--------------------------------------------------------------------------------
+
+The algorithm reflects a SALES-FOCUSED APPROACH:
+
+  1. NEVER show impossible options
+     -> Negative scores are filtered out completely
+
+  2. RANK by installation confidence
+     -> Width/depth weighted highest because fit is non-negotiable
+
+  3. RESPECT customer preferences
+     -> Mounting style matching gives significant bonus
+
+  4. ALLOW flexibility
+     -> Bowl count is soft preference, not hard filter
+
+  5. ALWAYS show something
+     -> Low threshold (score > 0) keeps options visible for edge cases
+
+The 100-POINT SCALE was chosen for:
+
+  - Easy mental math during demos ("This sink scores 85%")
+  - Clear percentage interpretation for customers
+  - Room for future scoring factors without restructuring
+
+
+--------------------------------------------------------------------------------
+POTENTIAL FUTURE ENHANCEMENTS
+--------------------------------------------------------------------------------
+
+The algorithm could be extended to include:
+
+  PRICE RANGE MATCHING
+    -> Customer budget vs sink price
+    -> Bonus for sinks within stated budget range
+
+  MATERIAL COMPATIBILITY
+    -> Countertop material vs sink material recommendations
+    -> e.g., stainless pairs well with granite
+
+  HEIGHT CLEARANCE
+    -> Cabinet height vs sink depth + garbage disposal clearance
+    -> Important for deep farmhouse sinks
+
+  BRAND PREFERENCE
+    -> If customer has brand loyalty from previous purchases
+    -> Prioritize same brand for upsell opportunities
+
+  INVENTORY STATUS
+    -> Prioritize in-stock items over backorders
+    -> Important for customers with tight timelines
+
+  INSTALLATION COMPLEXITY
+    -> Factor in labor cost and skill requirements
+    -> Farmhouse sinks require more expertise than drop-in
+
+
+================================================================================

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IHMS Data Flow Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 40px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #94a3b8;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #f8fafc;
+        }
+
+        .section h2 .icon {
+            font-size: 1.8rem;
+        }
+
+        .mermaid {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .flow-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .legend-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.blue { background: #3b82f6; }
+        .legend-dot.green { background: #22c55e; }
+        .legend-dot.yellow { background: #f59e0b; }
+        .legend-dot.purple { background: #8b5cf6; }
+        .legend-dot.pink { background: #ec4899; }
+        .legend-dot.red { background: #ef4444; }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .tech-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tech-card h3 {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .tech-card p {
+            font-size: 1.1rem;
+            color: #f8fafc;
+            font-weight: 500;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .status-card .port {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #22c55e;
+        }
+
+        .status-card .label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .subway-map {
+            position: relative;
+            padding: 40px;
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .subway-line {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .line-label {
+            width: 140px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .stations {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .track {
+            position: absolute;
+            height: 6px;
+            left: 0;
+            right: 0;
+            border-radius: 3px;
+        }
+
+        .track.auth { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .track.customer { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .track.measurement { background: linear-gradient(90deg, #22c55e, #4ade80); }
+        .track.matching { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .track.quote { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+        .track.offline { background: linear-gradient(90deg, #f97316, #fb923c); }
+
+        .station {
+            position: relative;
+            z-index: 1;
+            background: #1e293b;
+            border: 3px solid;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            margin: 0 30px;
+            flex-shrink: 0;
+        }
+
+        .station.auth { border-color: #ef4444; }
+        .station.customer { border-color: #3b82f6; }
+        .station.measurement { border-color: #22c55e; }
+        .station.matching { border-color: #f59e0b; }
+        .station.quote { border-color: #8b5cf6; }
+        .station.offline { border-color: #f97316; }
+
+        .station-label {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .transfer {
+            width: 32px;
+            height: 32px;
+            background: white;
+            border: 4px solid #1e293b;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: #1e293b;
+            }
+            .section {
+                break-inside: avoid;
+                border: 1px solid #e2e8f0;
+            }
+            .mermaid {
+                background: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🚰</div>
+            <h1>I Hate My Sink</h1>
+            <p class="subtitle">Data Flow Architecture | Executive Overview</p>
+        </header>
+
+        <!-- System Overview -->
+        <section class="section">
+            <h2><span class="icon">🏗️</span> System Architecture</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph CLIENT["📱 CLIENT LAYER"]
+        direction TB
+        UI["React PWA<br/>localhost:3010"]
+        AUTH["AuthContext<br/>JWT Tokens"]
+        OFFLINE["OfflineContext<br/>Sync Manager"]
+        IDB[("IndexedDB<br/>Local Storage")]
+    end
+
+    subgraph API["⚡ API LAYER"]
+        direction TB
+        TRPC["tRPC Server<br/>localhost:3011"]
+        ROUTES["Protected Routes<br/>• auth • customer<br/>• measurement • sink<br/>• quote"]
+    end
+
+    subgraph DATA["🗄️ DATA LAYER"]
+        direction TB
+        PG[("PostgreSQL<br/>Port 5433")]
+        REDIS[("Redis Cache<br/>Port 6380")]
+    end
+
+    UI <--> AUTH
+    UI <--> OFFLINE
+    OFFLINE <--> IDB
+    AUTH <--> TRPC
+    TRPC <--> ROUTES
+    ROUTES <--> PG
+    ROUTES <--> REDIS
+
+    IDB -.->|"Sync when online"| TRPC
+            </div>
+        </section>
+
+        <!-- Subway Map -->
+        <section class="section">
+            <h2><span class="icon">🚇</span> Data Subway Map</h2>
+            <div class="subway-map">
+                <div class="subway-line">
+                    <div class="line-label" style="color: #ef4444;">🔴 AUTH LINE</div>
+                    <div class="stations">
+                        <div class="track auth"></div>
+                        <div class="station auth"><span class="station-label">Login</span></div>
+                        <div class="station auth"><span class="station-label">AuthContext</span></div>
+                        <div class="station auth"><span class="station-label">JWT Store</span></div>
+                        <div class="station auth transfer"><span class="station-label">Dashboard</span></div>
+                    </div>
+                </div>
+
+                <div class="subway-line">
+                    <div class="line-label" style="color: #3b82f6;">🔵 CUSTOMER</div>
+                    <div class="stations">
+                        <div class="track customer"></div>
+                        <div class="station customer"><span class="station-label">List</span></div>
+                        <div class="station customer"><span class="station-label">Create</span></div>
+                        <div class="station customer"><span class="station-label">tRPC</span></div>
+                        <div class="station customer"><span class="station-label">PostgreSQL</span></div>
+                    </div>
+                </div>
+
+                <div class="subway-line">
+                    <div class="line-label" style="color: #22c55e;">🟢 MEASUREMENT</div>
+                    <div class="stations">
+                        <div class="track measurement"></div>
+                        <div class="station measurement"><span class="station-label">Capture</span></div>
+                        <div class="station measurement"><span class="station-label">Cabinet</span></div>
+                        <div class="station measurement"><span class="station-label">Countertop</span></div>
+                        <div class="station measurement transfer"><span class="station-label">Save</span></div>
+                    </div>
+                </div>
+
+                <div class="subway-line">
+                    <div class="line-label" style="color: #f59e0b;">🟡 SINK MATCH</div>
+                    <div class="stations">
+                        <div class="track matching"></div>
+                        <div class="station matching"><span class="station-label">Dims</span></div>
+                        <div class="station matching"><span class="station-label">Algorithm</span></div>
+                        <div class="station matching"><span class="station-label">Score</span></div>
+                        <div class="station matching"><span class="station-label">Results</span></div>
+                    </div>
+                </div>
+
+                <div class="subway-line">
+                    <div class="line-label" style="color: #8b5cf6;">🟣 QUOTE LINE</div>
+                    <div class="stations">
+                        <div class="track quote"></div>
+                        <div class="station quote"><span class="station-label">Create</span></div>
+                        <div class="station quote"><span class="station-label">Line Items</span></div>
+                        <div class="station quote"><span class="station-label">Calculate</span></div>
+                        <div class="station quote"><span class="station-label">Sign</span></div>
+                    </div>
+                </div>
+
+                <div class="subway-line">
+                    <div class="line-label" style="color: #f97316;">🟠 OFFLINE SYNC</div>
+                    <div class="stations">
+                        <div class="track offline"></div>
+                        <div class="station offline"><span class="station-label">IndexedDB</span></div>
+                        <div class="station offline"><span class="station-label">Queue</span></div>
+                        <div class="station offline"><span class="station-label">Online</span></div>
+                        <div class="station offline"><span class="station-label">Sync</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flow-legend">
+                <div class="legend-item"><div class="legend-dot red"></div><span>Authentication & tokens</span></div>
+                <div class="legend-item"><div class="legend-dot blue"></div><span>Customer management</span></div>
+                <div class="legend-item"><div class="legend-dot green"></div><span>Measurement capture</span></div>
+                <div class="legend-item"><div class="legend-dot yellow"></div><span>Sink matching engine</span></div>
+                <div class="legend-item"><div class="legend-dot purple"></div><span>Quote generation</span></div>
+                <div class="legend-item" style="background: rgba(249,115,22,0.2);"><div class="legend-dot" style="background:#f97316;"></div><span>Offline sync (parallel)</span></div>
+            </div>
+        </section>
+
+        <!-- Sales Journey -->
+        <section class="section">
+            <h2><span class="icon">🎯</span> Sales Journey Flow</h2>
+            <div class="mermaid">
+flowchart LR
+    C["👤<br/>Customer"] --> M["📐<br/>Measurement"] --> S["🔍<br/>Sink Match"] --> Q["📄<br/>Quote"] --> SIG["✍️<br/>Signature"]
+
+    style C fill:#3b82f6,color:#fff,stroke:#1d4ed8
+    style M fill:#22c55e,color:#fff,stroke:#15803d
+    style S fill:#f59e0b,color:#fff,stroke:#b45309
+    style Q fill:#8b5cf6,color:#fff,stroke:#6d28d9
+    style SIG fill:#ec4899,color:#fff,stroke:#be185d
+            </div>
+        </section>
+
+        <!-- Sink Matching -->
+        <section class="section">
+            <h2><span class="icon">🔍</span> Sink Matching Algorithm</h2>
+            <div class="mermaid">
+flowchart TD
+    subgraph INPUT["📥 Measurement Input"]
+        M["Cabinet: 36×24×34 in<br/>Countertop: Granite 1.5in<br/>Mount: Undermount"]
+    end
+
+    subgraph ALGO["⚙️ Scoring Engine"]
+        direction TB
+        W["Width Fit<br/>0-30 pts"]
+        D["Depth Fit<br/>0-30 pts"]
+        MT["Mount Match<br/>0-25 pts"]
+        B["Bowl Count<br/>0-15 pts"]
+    end
+
+    subgraph OUTPUT["📤 Ranked Results"]
+        R1["🥇 92 pts - Excellent"]
+        R2["🥈 78 pts - Good"]
+        R3["🥉 54 pts - Marginal"]
+    end
+
+    INPUT --> ALGO
+    W --> OUTPUT
+    D --> OUTPUT
+    MT --> OUTPUT
+    B --> OUTPUT
+
+    style R1 fill:#22c55e,color:#fff
+    style R2 fill:#3b82f6,color:#fff
+    style R3 fill:#f59e0b,color:#fff
+            </div>
+        </section>
+
+        <!-- Offline Architecture -->
+        <section class="section">
+            <h2><span class="icon">📴</span> Offline-First Architecture</h2>
+            <div class="mermaid">
+flowchart LR
+    subgraph ONLINE["🌐 Online"]
+        O1["Action"] --> O2["tRPC"] --> O3["PostgreSQL"]
+    end
+
+    subgraph OFFLINE["📴 Offline"]
+        F1["Action"] --> F2["IndexedDB"] --> F3["Pending Queue"]
+    end
+
+    subgraph SYNC["🔄 Sync"]
+        S1["Detect Online"] --> S2["Process Queue"] --> S3["Clear & Update"]
+    end
+
+    F3 -.->|"Connection restored"| S1
+    S3 -.->|"Data persisted"| O3
+
+    style ONLINE fill:#dcfce7,stroke:#22c55e
+    style OFFLINE fill:#fef3c7,stroke:#f59e0b
+    style SYNC fill:#dbeafe,stroke:#3b82f6
+            </div>
+        </section>
+
+        <!-- Database -->
+        <section class="section">
+            <h2><span class="icon">🗄️</span> Database Schema</h2>
+            <div class="mermaid">
+erDiagram
+    COMPANIES ||--o{ USERS : employs
+    COMPANIES ||--o{ CUSTOMERS : has
+    COMPANIES ||--o{ SINKS : catalogs
+    CUSTOMERS ||--o{ MEASUREMENTS : has
+    CUSTOMERS ||--o{ QUOTES : receives
+    MEASUREMENTS ||--o{ QUOTES : references
+    QUOTES ||--o{ LINE_ITEMS : contains
+    SINKS ||--o{ LINE_ITEMS : included
+
+    COMPANIES {
+        uuid id PK
+        string name
+        string slug
+    }
+    USERS {
+        uuid id PK
+        string email
+        enum role
+    }
+    CUSTOMERS {
+        uuid id PK
+        string name
+        jsonb address
+    }
+    MEASUREMENTS {
+        uuid id PK
+        decimal width
+        enum mount_style
+    }
+    SINKS {
+        uuid id PK
+        string sku
+        decimal price
+    }
+    QUOTES {
+        uuid id PK
+        string number
+        decimal total
+    }
+            </div>
+        </section>
+
+        <!-- Tech Stack -->
+        <section class="section">
+            <h2><span class="icon">🛠️</span> Technology Stack</h2>
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h3>Frontend</h3>
+                    <p>React 18 + Vite PWA</p>
+                </div>
+                <div class="tech-card">
+                    <h3>State</h3>
+                    <p>TanStack Query + tRPC</p>
+                </div>
+                <div class="tech-card">
+                    <h3>Styling</h3>
+                    <p>Tailwind CSS</p>
+                </div>
+                <div class="tech-card">
+                    <h3>API</h3>
+                    <p>tRPC + Express</p>
+                </div>
+                <div class="tech-card">
+                    <h3>Database</h3>
+                    <p>PostgreSQL 16</p>
+                </div>
+                <div class="tech-card">
+                    <h3>ORM</h3>
+                    <p>Drizzle ORM</p>
+                </div>
+                <div class="tech-card">
+                    <h3>Cache</h3>
+                    <p>Redis</p>
+                </div>
+                <div class="tech-card">
+                    <h3>Offline</h3>
+                    <p>IndexedDB (idb)</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Service Status -->
+        <section class="section">
+            <h2><span class="icon">🚦</span> Service Endpoints</h2>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="port">3010</div>
+                    <div class="label">Frontend (Vite)</div>
+                </div>
+                <div class="status-card">
+                    <div class="port">3011</div>
+                    <div class="label">Backend (tRPC)</div>
+                </div>
+                <div class="status-card">
+                    <div class="port">5433</div>
+                    <div class="label">PostgreSQL</div>
+                </div>
+                <div class="status-card">
+                    <div class="port">6380</div>
+                    <div class="label">Redis</div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>IHMS Data Flow Architecture | Generated for Demo Readout</p>
+            <p style="margin-top: 10px;">Demo Login: demo@example.com / Password123</p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'neutral',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            er: {
+                useMaxWidth: true
+            }
+        });
+    </script>
+</body>
+</html>
