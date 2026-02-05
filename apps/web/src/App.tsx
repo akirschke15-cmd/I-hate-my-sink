@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { SkipNavigation } from './components/SkipNavigation';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
@@ -22,8 +23,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center" role="status" aria-live="polite">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" aria-hidden="true" />
+        <span className="sr-only">Loading authentication status...</span>
       </div>
     );
   }
@@ -40,8 +42,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center" role="status" aria-live="polite">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" aria-hidden="true" />
+        <span className="sr-only">Loading authentication status...</span>
       </div>
     );
   }
@@ -59,8 +62,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <SkipNavigation />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
       <Route
         path="/dashboard"
         element={
@@ -181,9 +186,10 @@ function App() {
           </AdminRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </>
   );
 }
 

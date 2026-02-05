@@ -19,11 +19,11 @@ export function CustomersPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-      <header className="border-b border-primary-100/50 bg-white/80 backdrop-blur-sm">
+      <header className="border-b border-primary-100/50 bg-white/80 backdrop-blur-sm" role="banner">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="rounded-lg p-2 text-primary-600 hover:bg-primary-100/50 transition-colors">
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <Link to="/dashboard" className="rounded-lg p-2 text-primary-600 hover:bg-primary-100/50 transition-colors" aria-label="Back to dashboard">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -43,13 +43,15 @@ export function CustomersPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 py-6" role="main">
         <div className="mb-6 relative max-w-md">
+          <label htmlFor="customer-search" className="sr-only">Search customers</label>
           <svg
             className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -59,25 +61,28 @@ export function CustomersPage() {
             />
           </svg>
           <Input
+            id="customer-search"
             placeholder="Search customers..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-11 shadow-soft border-primary-100/50 focus:border-primary-300 focus:ring-2 focus:ring-primary-200 rounded-xl w-full"
+            aria-label="Search customers by name, email, or phone"
           />
         </div>
 
         {isError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
             <p className="font-medium">Failed to load customers</p>
             <p className="text-sm">{error?.message || 'Please try again later'}</p>
           </div>
         ) : isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+          <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" aria-hidden="true" />
+            <span className="sr-only">Loading customers...</span>
           </div>
         ) : customers?.length === 0 ? (
-          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-soft">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center shadow-md">
+          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-soft" role="status">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center shadow-md" aria-hidden="true">
               <svg
                 className="h-8 w-8 text-primary-600"
                 fill="none"
@@ -92,14 +97,14 @@ export function CustomersPage() {
                 />
               </svg>
             </div>
-            <h3 className="mt-6 text-lg font-medium text-gray-900">No customers yet</h3>
+            <h2 className="mt-6 text-lg font-medium text-gray-900">No customers yet</h2>
             <p className="mt-2 text-gray-500">Get started by adding your first customer.</p>
             <Link to="/customers/new" className="mt-6 inline-block">
               <Button>Add Customer</Button>
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Customer list">
             {customers?.map((customer: { id: string; firstName: string; lastName: string; email?: string | null; phone?: string | null; address?: { city?: string; state?: string } | null }) => {
               const initials = `${customer.firstName.charAt(0)}${customer.lastName.charAt(0)}`.toUpperCase();
 
@@ -162,7 +167,7 @@ export function CustomersPage() {
                 </Link>
               );
             })}
-          </div>
+          </section>
         )}
       </main>
     </div>

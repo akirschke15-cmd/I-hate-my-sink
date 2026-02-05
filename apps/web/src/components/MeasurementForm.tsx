@@ -112,13 +112,13 @@ export function MeasurementForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" aria-label="Measurement form">
       {errors.form && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{errors.form}</div>
+        <div role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{errors.form}</div>
       )}
 
-      <div className="space-y-4">
-        <h3 className="font-semibold text-gray-900">Cabinet Dimensions</h3>
+      <fieldset className="space-y-4">
+        <legend className="font-semibold text-gray-900">Cabinet Dimensions</legend>
         <div className="grid grid-cols-3 gap-4">
           <Input
             label="Width (in)"
@@ -157,10 +157,10 @@ export function MeasurementForm({
             required
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="space-y-4">
-        <h3 className="font-semibold text-gray-900">Countertop Details</h3>
+      <fieldset className="space-y-4">
+        <legend className="font-semibold text-gray-900">Countertop Details</legend>
         <div className="grid grid-cols-2 gap-4">
           <Select
             label="Material"
@@ -182,10 +182,10 @@ export function MeasurementForm({
             placeholder="1.5"
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="space-y-4">
-        <h3 className="font-semibold text-gray-900">Existing Cutout (if replacing)</h3>
+      <fieldset className="space-y-4">
+        <legend className="font-semibold text-gray-900">Existing Cutout (if replacing)</legend>
         <div className="grid grid-cols-2 gap-4">
           <Input
             label="Cutout Width (in)"
@@ -210,10 +210,10 @@ export function MeasurementForm({
             placeholder="22"
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="space-y-4">
-        <h3 className="font-semibold text-gray-900">Additional Info</h3>
+      <fieldset className="space-y-4">
+        <legend className="font-semibold text-gray-900">Additional Info</legend>
         <Select
           label="Location"
           options={locationOptions}
@@ -223,9 +223,10 @@ export function MeasurementForm({
           error={errors.location}
         />
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+          <label htmlFor="measurement-notes" className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
           <textarea
-            className={`block w-full rounded-lg border px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 ${
+            id="measurement-notes"
+            className={`block w-full rounded-lg border px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 ${
               errors.notes
                 ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'
@@ -238,12 +239,13 @@ export function MeasurementForm({
             aria-describedby={errors.notes ? 'notes-error' : undefined}
           />
           {errors.notes && (
-            <p id="notes-error" className="mt-1 flex items-center gap-1 text-sm text-red-600">
+            <p id="notes-error" className="mt-1 flex items-center gap-1 text-sm text-red-600" role="alert">
               <svg
                 className="h-4 w-4 flex-shrink-0"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
               >
                 <path
                   fillRule="evenodd"
@@ -255,7 +257,7 @@ export function MeasurementForm({
             </p>
           )}
         </div>
-      </div>
+      </fieldset>
 
       <div className="flex gap-3 pt-4">
         {onCancel && (

@@ -408,6 +408,7 @@ export function QuoteDetailPage() {
                 </Button>
               </>
             )}
+            {/* Workiz integration - hidden for future enhancement
             {quote.status === 'accepted' && !quote.workizJobId && (
               <Button
                 variant="secondary"
@@ -427,6 +428,7 @@ export function QuoteDetailPage() {
                 View in Workiz
               </a>
             )}
+            */}
             <Button
               variant="outline"
               onClick={handleDelete}
@@ -528,6 +530,7 @@ export function QuoteDetailPage() {
                     </dd>
                   </div>
                 )}
+                {/* Workiz integration - hidden for future enhancement
                 {quote.workizJobId && (
                   <div>
                     <dt className="text-sm text-gray-500">Workiz Job</dt>
@@ -547,6 +550,7 @@ export function QuoteDetailPage() {
                     </dd>
                   </div>
                 )}
+                */}
                 {quote.measurement && (
                   <div>
                     <dt className="text-sm text-gray-500">Measurement</dt>

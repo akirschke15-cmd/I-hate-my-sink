@@ -20,12 +20,12 @@ export function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white shadow-sm">
+      <header className="border-b border-gray-200 bg-white shadow-sm" role="banner">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Brand */}
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600" aria-hidden="true">
                 <svg
                   className="h-6 w-6 text-white"
                   fill="none"
@@ -53,8 +53,9 @@ export function DashboardPage() {
                 <Link
                   to="/admin"
                   className="hidden sm:flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
+                  aria-label="Go to Admin Dashboard"
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -67,11 +68,12 @@ export function DashboardPage() {
               )}
 
               {/* Status indicators */}
-              <div className="hidden items-center gap-3 sm:flex">
+              <div className="hidden items-center gap-3 sm:flex" role="status" aria-label="Connection status">
                 {/* Online/Offline */}
                 <div className="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5">
                   <span
                     className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}
+                    aria-hidden="true"
                   />
                   <span className="text-xs font-medium text-gray-600">
                     {isOnline ? 'Online' : 'Offline'}
@@ -84,9 +86,10 @@ export function DashboardPage() {
                     onClick={syncPending}
                     disabled={isSyncing || !isOnline}
                     className="flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-200 disabled:opacity-50"
+                    aria-label={`Sync ${pendingSyncCount} pending items`}
                   >
                     {isSyncing ? (
-                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" aria-hidden="true" />
                     ) : (
                       <span>{pendingSyncCount}</span>
                     )}
@@ -96,8 +99,8 @@ export function DashboardPage() {
               </div>
 
               {/* User dropdown */}
-              <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-sm font-medium text-white">
+              <nav className="flex items-center gap-3 border-l border-gray-200 pl-4" aria-label="User account navigation">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-sm font-medium text-white" aria-hidden="true">
                   {user?.firstName?.[0]}
                   {user?.lastName?.[0]}
                 </div>
@@ -107,17 +110,17 @@ export function DashboardPage() {
                   </p>
                   <p className="text-xs text-gray-500">{user?.role}</p>
                 </div>
-                <Button variant="secondary" size="sm" onClick={logout}>
+                <Button variant="secondary" size="sm" onClick={logout} aria-label="Log out of your account">
                   Logout
                 </Button>
-              </div>
+              </nav>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" role="main">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">
@@ -130,7 +133,7 @@ export function DashboardPage() {
 
         {/* Error States */}
         {(customersError || quotesError || sinksError) && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
             <p className="font-medium">Failed to load some dashboard data</p>
             <p className="text-sm">
               {customersError && customersErrorMsg?.message}
@@ -141,7 +144,7 @@ export function DashboardPage() {
         )}
 
         {/* Stats Grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Dashboard statistics">
           <StatCard
             title="Total Customers"
             value={customerCount.toString()}
@@ -206,18 +209,18 @@ export function DashboardPage() {
             color="amber"
             link="/analytics"
           />
-        </div>
+        </section>
 
         {/* Two Column Layout */}
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Quick Actions */}
-          <div className="lg:col-span-2">
+          <section className="lg:col-span-2" aria-labelledby="quick-actions-heading">
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
               <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-                <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+                <h2 id="quick-actions-heading" className="text-lg font-semibold text-gray-900">Quick Actions</h2>
                 <p className="text-sm text-gray-500">Common tasks to get you started</p>
               </div>
-              <div className="grid gap-4 p-6 sm:grid-cols-2">
+              <nav className="grid gap-4 p-6 sm:grid-cols-2" aria-label="Quick actions">
                 <ActionCard
                   title="Add New Customer"
                   description="Create a new customer record"
@@ -295,18 +298,18 @@ export function DashboardPage() {
                     }
                   />
                 )}
-              </div>
+              </nav>
             </div>
-          </div>
+          </section>
 
           {/* Recent Customers Sidebar */}
-          <div className="lg:col-span-1">
+          <aside className="lg:col-span-1" aria-labelledby="recent-customers-heading">
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
               <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Customers</h3>
+                <h2 id="recent-customers-heading" className="text-lg font-semibold text-gray-900">Recent Customers</h2>
                 <p className="text-sm text-gray-500">Latest additions</p>
               </div>
-              <div className="divide-y divide-gray-200">
+              <nav className="divide-y divide-gray-200" aria-label="Recent customers">
                 {customers && customers.length > 0 ? (
                   customers.slice(0, 5).map((customer: { id: string; firstName: string; lastName: string; email?: string | null }) => (
                     <Link
@@ -352,7 +355,7 @@ export function DashboardPage() {
                     </Link>
                   </div>
                 )}
-              </div>
+              </nav>
               {customers && customers.length > 0 && (
                 <div className="border-t border-gray-200 px-6 py-3">
                   <Link
@@ -364,14 +367,14 @@ export function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
+          </aside>
         </div>
 
         {/* Offline Notice */}
         {!isOnline && (
-          <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <aside role="status" aria-live="polite" className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100" aria-hidden="true">
                 <svg
                   className="h-5 w-5 text-amber-600"
                   fill="none"
@@ -387,14 +390,14 @@ export function DashboardPage() {
                 </svg>
               </div>
               <div>
-                <h4 className="font-medium text-amber-900">You&apos;re currently offline</h4>
+                <h3 className="font-medium text-amber-900">You&apos;re currently offline</h3>
                 <p className="mt-1 text-sm text-amber-700">
                   You can still capture measurements and create quotes. They&apos;ll sync automatically
                   when you&apos;re back online.
                 </p>
               </div>
             </div>
-          </div>
+          </aside>
         )}
       </main>
     </div>

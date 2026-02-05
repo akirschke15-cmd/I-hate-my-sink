@@ -61,7 +61,16 @@ function Root() {
           <BrowserRouter>
             <OfflineProvider>
               <AuthProvider>
-                <Toaster position="top-right" />
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 5000,
+                    ariaProps: {
+                      role: 'status',
+                      'aria-live': 'polite',
+                    },
+                  }}
+                />
                 <PWAUpdatePrompt />
                 <PWAInstallPrompt />
                 <App />
