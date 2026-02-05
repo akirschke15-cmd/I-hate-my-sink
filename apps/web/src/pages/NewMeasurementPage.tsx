@@ -1,27 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { trpc } from '../lib/trpc';
-import { Button, Input, Select } from '../components/ui';
-
-const countertopMaterials = [
-  { value: 'granite', label: 'Granite' },
-  { value: 'quartz', label: 'Quartz' },
-  { value: 'marble', label: 'Marble' },
-  { value: 'laminate', label: 'Laminate' },
-  { value: 'solid_surface', label: 'Solid Surface' },
-  { value: 'butcher_block', label: 'Butcher Block' },
-  { value: 'stainless_steel', label: 'Stainless Steel' },
-  { value: 'concrete', label: 'Concrete' },
-  { value: 'tile', label: 'Tile' },
-  { value: 'other', label: 'Other' },
-];
-
-const mountingStyles = [
-  { value: 'drop_in', label: 'Drop-in (Top Mount)' },
-  { value: 'undermount', label: 'Undermount' },
-  { value: 'farmhouse', label: 'Farmhouse (Apron Front)' },
-  { value: 'flush_mount', label: 'Flush Mount' },
-];
+import { Button } from '../components/ui';
+import { MeasurementFormFields } from '../components/MeasurementFormFields';
+import type { MeasurementFormData } from '../components/MeasurementFormFields';
 
 export function NewMeasurementPage() {
   const { id: customerId } = useParams<{ id: string }>();
@@ -35,13 +17,12 @@ export function NewMeasurementPage() {
 
   const createMeasurement = trpc.measurement.create.useMutation({
     onSuccess: async () => {
-      // Invalidate the measurements list so it refetches on the customer page
       await utils.measurement.listByCustomer.invalidate({ customerId: customerId! });
       navigate(`/customers/${customerId}`);
     },
   });
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MeasurementFormData>({
     location: '',
     cabinetWidthInches: '',
     cabinetDepthInches: '',
@@ -172,210 +153,7 @@ export function NewMeasurementPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{error}</div>}
 
-          {/* Location */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Location</h2>
-            <Input
-              label="Room/Area"
-              value={formData.location}
-              onChange={(e) => handleChange('location', e.target.value)}
-              placeholder="e.g., Kitchen, Master Bath, Utility Room"
-            />
-          </div>
-
-          {/* Cabinet Dimensions */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Cabinet Dimensions</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Width (inches)"
-                type="number"
-                step="0.125"
-                value={formData.cabinetWidthInches}
-                onChange={(e) => handleChange('cabinetWidthInches', e.target.value)}
-                required
-              />
-              <Input
-                label="Depth (inches)"
-                type="number"
-                step="0.125"
-                value={formData.cabinetDepthInches}
-                onChange={(e) => handleChange('cabinetDepthInches', e.target.value)}
-                required
-              />
-              <Input
-                label="Height (inches)"
-                type="number"
-                step="0.125"
-                value={formData.cabinetHeightInches}
-                onChange={(e) => handleChange('cabinetHeightInches', e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Countertop Details */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Countertop Details</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select
-                label="Material"
-                value={formData.countertopMaterial}
-                onChange={(e) => handleChange('countertopMaterial', e.target.value)}
-                options={[{ value: '', label: 'Select material...' }, ...countertopMaterials]}
-              />
-              <Input
-                label="Thickness (inches)"
-                type="number"
-                step="0.125"
-                value={formData.countertopThicknessInches}
-                onChange={(e) => handleChange('countertopThicknessInches', e.target.value)}
-                placeholder="e.g., 1.5"
-              />
-              <Input
-                label="Front Overhang (inches)"
-                type="number"
-                step="0.125"
-                value={formData.countertopOverhangFrontInches}
-                onChange={(e) => handleChange('countertopOverhangFrontInches', e.target.value)}
-              />
-              <Input
-                label="Side Overhang (inches)"
-                type="number"
-                step="0.125"
-                value={formData.countertopOverhangSidesInches}
-                onChange={(e) => handleChange('countertopOverhangSidesInches', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Mounting & Faucet */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Mounting & Faucet</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select
-                label="Mounting Style"
-                value={formData.mountingStyle}
-                onChange={(e) => handleChange('mountingStyle', e.target.value)}
-                options={[{ value: '', label: 'Select style...' }, ...mountingStyles]}
-              />
-              <Input
-                label="Faucet Holes"
-                type="number"
-                min="0"
-                max="4"
-                value={formData.faucetHoleCount}
-                onChange={(e) => handleChange('faucetHoleCount', e.target.value)}
-                placeholder="0-4"
-              />
-            </div>
-            {formData.faucetHoleCount && parseInt(formData.faucetHoleCount, 10) > 1 && (
-              <div className="mt-4">
-                <Input
-                  label="Faucet Hole Spacing"
-                  value={formData.faucetHoleSpacing}
-                  onChange={(e) => handleChange('faucetHoleSpacing', e.target.value)}
-                  placeholder="e.g., 4 inch center, 8 inch spread"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Existing Sink (for replacements) */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Existing Sink (if replacing)</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Width (inches)"
-                type="number"
-                step="0.125"
-                value={formData.existingSinkWidthInches}
-                onChange={(e) => handleChange('existingSinkWidthInches', e.target.value)}
-              />
-              <Input
-                label="Depth (inches)"
-                type="number"
-                step="0.125"
-                value={formData.existingSinkDepthInches}
-                onChange={(e) => handleChange('existingSinkDepthInches', e.target.value)}
-              />
-              <Input
-                label="Bowl Count"
-                type="number"
-                min="1"
-                max="3"
-                value={formData.existingSinkBowlCount}
-                onChange={(e) => handleChange('existingSinkBowlCount', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Clearances */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Clearances</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Backsplash Height (inches)"
-                type="number"
-                step="0.125"
-                value={formData.backsplashHeightInches}
-                onChange={(e) => handleChange('backsplashHeightInches', e.target.value)}
-              />
-              <Input
-                label="Window Clearance (inches)"
-                type="number"
-                step="0.125"
-                value={formData.windowClearanceInches}
-                onChange={(e) => handleChange('windowClearanceInches', e.target.value)}
-                placeholder="Distance to window sill"
-              />
-              <Input
-                label="Plumbing Centerline (inches)"
-                type="number"
-                step="0.125"
-                value={formData.plumbingCenterlineFromLeft}
-                onChange={(e) => handleChange('plumbingCenterlineFromLeft', e.target.value)}
-                placeholder="From left side"
-              />
-            </div>
-          </div>
-
-          {/* Accessories */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Accessories</h2>
-            <div className="space-y-3">
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.garbageDisposal}
-                  onChange={(e) => handleChange('garbageDisposal', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="text-gray-700">Garbage Disposal</span>
-              </label>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.dishwasherAirGap}
-                  onChange={(e) => handleChange('dishwasherAirGap', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="text-gray-700">Dishwasher Air Gap</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Notes</h2>
-            <textarea
-              className="block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              rows={4}
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Additional notes about this measurement..."
-            />
-          </div>
+          <MeasurementFormFields formData={formData} onChange={handleChange} />
 
           <div className="flex gap-3">
             <Link to={`/customers/${customerId}`} className="flex-1">

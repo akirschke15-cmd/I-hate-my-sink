@@ -9,6 +9,7 @@ import {
   pgEnum,
   integer,
   boolean,
+  index,
 } from 'drizzle-orm/pg-core';
 import { companies } from './companies';
 import { customers } from './customers';
@@ -89,7 +90,11 @@ export const measurements = pgTable('measurements', {
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  companyIdIdx: index('measurements_company_id_idx').on(table.companyId),
+  customerIdIdx: index('measurements_customer_id_idx').on(table.customerId),
+  createdByIdIdx: index('measurements_created_by_id_idx').on(table.createdById),
+}));
 
 export type Measurement = typeof measurements.$inferSelect;
 export type NewMeasurement = typeof measurements.$inferInsert;

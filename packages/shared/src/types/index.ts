@@ -56,14 +56,23 @@ export interface SyncableEntity {
   version?: number;
 }
 
-export interface PendingSync<T> {
+export type SyncEntity = 'customer' | 'measurement' | 'quote';
+
+export interface PendingSync<T = unknown> {
   id: string;
   type: 'create' | 'update' | 'delete';
-  entity: string;
+  entity: SyncEntity;
   data: T;
   createdAt: Date;
   retryCount: number;
   lastAttempt?: Date;
+}
+
+export interface SyncableRecord {
+  id: string;
+  localId?: string;
+  version?: number;
+  [key: string]: unknown;
 }
 
 // Conflict resolution types

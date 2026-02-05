@@ -17,6 +17,7 @@ import { NewQuotePage } from './pages/NewQuotePage';
 import { QuoteDetailPage } from './pages/QuoteDetailPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SalesHistoryPage } from './pages/SalesHistoryPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -187,7 +188,7 @@ function App() {
         }
       />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );

@@ -29,6 +29,7 @@ export function ScreenReaderAnnouncement({
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [message, clearAfter]);
 
   if (!message) return null;

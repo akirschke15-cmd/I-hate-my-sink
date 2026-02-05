@@ -1,0 +1,22 @@
+CREATE INDEX IF NOT EXISTS "users_company_id_idx" ON "users" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "users_email_idx" ON "users" USING btree ("email");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "customers_company_id_idx" ON "customers" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "customers_assigned_user_id_idx" ON "customers" USING btree ("assigned_user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "customers_email_idx" ON "customers" USING btree ("email");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "customers_created_at_idx" ON "customers" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "customers_company_assigned_user_idx" ON "customers" USING btree ("company_id","assigned_user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "sinks_company_id_idx" ON "sinks" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "sinks_is_active_idx" ON "sinks" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "sinks_material_idx" ON "sinks" USING btree ("material");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "sinks_mounting_style_idx" ON "sinks" USING btree ("mounting_style");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "measurements_company_id_idx" ON "measurements" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "measurements_customer_id_idx" ON "measurements" USING btree ("customer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "measurements_created_by_id_idx" ON "measurements" USING btree ("created_by_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "quotes_company_id_idx" ON "quotes" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "quotes_customer_id_idx" ON "quotes" USING btree ("customer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "quotes_created_by_id_idx" ON "quotes" USING btree ("created_by_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "quotes_status_idx" ON "quotes" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "quotes_created_at_idx" ON "quotes" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "quotes_company_status_idx" ON "quotes" USING btree ("company_id","status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "quote_line_items_quote_id_idx" ON "quote_line_items" USING btree ("quote_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "email_logs_quote_id_idx" ON "email_logs" USING btree ("quote_id");

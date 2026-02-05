@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, jsonb, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, jsonb, integer, index } from 'drizzle-orm/pg-core';
 import { companies } from './companies';
 import { users } from './users';
 
@@ -23,7 +23,13 @@ export const customers = pgTable('customers', {
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  companyIdIdx: index('customers_company_id_idx').on(table.companyId),
+  assignedUserIdIdx: index('customers_assigned_user_id_idx').on(table.assignedUserId),
+  emailIdx: index('customers_email_idx').on(table.email),
+  createdAtIdx: index('customers_created_at_idx').on(table.createdAt),
+  companyAssignedUserIdx: index('customers_company_assigned_user_idx').on(table.companyId, table.assignedUserId),
+}));
 
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;

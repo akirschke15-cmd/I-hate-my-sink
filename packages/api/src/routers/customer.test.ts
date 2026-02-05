@@ -157,8 +157,8 @@ describe('Customer Router', () => {
 
       const result = await caller.customer.list({});
 
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
+      expect(Array.isArray(result.items)).toBe(true);
+      expect(result.items.length).toBeGreaterThan(0);
     });
 
     it('should support search', async () => {
@@ -175,7 +175,7 @@ describe('Customer Router', () => {
         search: uniqueName,
       });
 
-      expect(result.some((c) => c.firstName === uniqueName)).toBe(true);
+      expect(result.items.some((c: { firstName: string }) => c.firstName === uniqueName)).toBe(true);
     });
 
     it('should support pagination', async () => {
@@ -186,7 +186,7 @@ describe('Customer Router', () => {
         offset: 0,
       });
 
-      expect(result.length).toBeLessThanOrEqual(5);
+      expect(result.items.length).toBeLessThanOrEqual(5);
     });
 
     it('should reject unauthenticated requests', async () => {

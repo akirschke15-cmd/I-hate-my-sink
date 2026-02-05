@@ -113,6 +113,7 @@ export function QuoteDetailPage() {
     },
   });
 
+  /* Workiz integration - reserved for future enhancement
   const createWorkizJob = trpc.quote.createWorkizJob.useMutation({
     onSuccess: (data: { success: boolean; jobId?: string; jobUrl?: string }) => {
       utils.quote.get.invalidate({ id: id! });
@@ -125,6 +126,7 @@ export function QuoteDetailPage() {
       toast.error(`Failed to create Workiz job: ${error.message}`);
     },
   });
+  */
 
   const resetNewItemForm = () => {
     setNewItemType('product');
@@ -221,10 +223,12 @@ export function QuoteDetailPage() {
     emailQuote.mutate({ id });
   };
 
+  /* Workiz integration - reserved for future enhancement
   const handleCreateWorkizJob = () => {
     if (!id) return;
     createWorkizJob.mutate({ id });
   };
+  */
 
   const handleDownloadPdf = useCallback(async () => {
     if (!id) return;

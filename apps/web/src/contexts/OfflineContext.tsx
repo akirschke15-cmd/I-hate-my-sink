@@ -175,7 +175,7 @@ function createStandaloneTRPCClient() {
  * @param item - The pending sync item containing entity type, operation, and data
  * @throws Error if sync fails - the error is re-thrown to keep the item in the queue
  */
-async function processSyncItem(item: PendingSync<unknown>): Promise<void> {
+async function processSyncItem(item: PendingSync): Promise<void> {
   const client = createStandaloneTRPCClient();
 
   console.log('[OfflineSync] Syncing:', {

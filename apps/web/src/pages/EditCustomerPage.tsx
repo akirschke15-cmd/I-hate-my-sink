@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { trpc } from '../lib/trpc';
-import { Button, Input } from '../components/ui';
+import { Button } from '../components/ui';
+import { CustomerFormFields, emptyCustomerForm } from '../components/CustomerFormFields';
+import type { CustomerFormData } from '../components/CustomerFormFields';
 
 export function EditCustomerPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,17 +22,7 @@ export function EditCustomerPage() {
     },
   });
 
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
-    notes: '',
-  });
+  const [formData, setFormData] = useState<CustomerFormData>(emptyCustomerForm);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -125,74 +117,7 @@ export function EditCustomerPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{error}</div>}
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Contact Information</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="First Name"
-                value={formData.firstName}
-                onChange={(e) => handleChange('firstName', e.target.value)}
-                required
-              />
-              <Input
-                label="Last Name"
-                value={formData.lastName}
-                onChange={(e) => handleChange('lastName', e.target.value)}
-                required
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-              />
-              <Input
-                label="Phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Address</h2>
-            <div className="space-y-4">
-              <Input
-                label="Street Address"
-                value={formData.street}
-                onChange={(e) => handleChange('street', e.target.value)}
-              />
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Input
-                  label="City"
-                  value={formData.city}
-                  onChange={(e) => handleChange('city', e.target.value)}
-                />
-                <Input
-                  label="State"
-                  value={formData.state}
-                  onChange={(e) => handleChange('state', e.target.value)}
-                />
-                <Input
-                  label="ZIP Code"
-                  value={formData.zip}
-                  onChange={(e) => handleChange('zip', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 border-b border-gray-200 pb-3 font-semibold text-gray-900">Notes</h2>
-            <textarea
-              className="block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              rows={4}
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Additional notes about this customer..."
-            />
-          </div>
+          <CustomerFormFields formData={formData} onChange={handleChange} />
 
           <div className="flex gap-3">
             <Link to={`/customers/${id}`} className="flex-1">

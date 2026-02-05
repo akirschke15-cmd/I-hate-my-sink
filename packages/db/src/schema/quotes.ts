@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, pgEnum, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, pgEnum, integer, index } from 'drizzle-orm/pg-core';
 import { companies } from './companies';
 import { customers } from './customers';
 import { users } from './users';
@@ -53,7 +53,14 @@ export const quotes = pgTable('quotes', {
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  companyIdIdx: index('quotes_company_id_idx').on(table.companyId),
+  customerIdIdx: index('quotes_customer_id_idx').on(table.customerId),
+  createdByIdIdx: index('quotes_created_by_id_idx').on(table.createdById),
+  statusIdx: index('quotes_status_idx').on(table.status),
+  createdAtIdx: index('quotes_created_at_idx').on(table.createdAt),
+  companyStatusIdx: index('quotes_company_status_idx').on(table.companyId, table.status),
+}));
 
 export type Quote = typeof quotes.$inferSelect;
 export type NewQuote = typeof quotes.$inferInsert;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, pgEnum, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, boolean, pgEnum, integer, index } from 'drizzle-orm/pg-core';
 import { companies } from './companies';
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'salesperson']);
@@ -21,7 +21,10 @@ export const users = pgTable('users', {
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  companyIdIdx: index('users_company_id_idx').on(table.companyId),
+  emailIdx: index('users_email_idx').on(table.email),
+}));
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

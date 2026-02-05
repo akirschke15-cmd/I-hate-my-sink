@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, integer, decimal, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, integer, decimal, pgEnum, index } from 'drizzle-orm/pg-core';
 import { quotes } from './quotes';
 import { sinks } from './sinks';
 
@@ -22,7 +22,9 @@ export const quoteLineItems = pgTable('quote_line_items', {
   lineTotal: decimal('line_total', { precision: 10, scale: 2 }).notNull(),
   // Sorting
   sortOrder: integer('sort_order').notNull().default(0),
-});
+}, (table) => ({
+  quoteIdIdx: index('quote_line_items_quote_id_idx').on(table.quoteId),
+}));
 
 export type QuoteLineItem = typeof quoteLineItems.$inferSelect;
 export type NewQuoteLineItem = typeof quoteLineItems.$inferInsert;

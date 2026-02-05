@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
 import { quotes } from './quotes';
 import { users } from './users';
 
@@ -26,7 +26,9 @@ export const emailLogs = pgTable('email_logs', {
   errorMessage: text('error_message'),
   sentAt: timestamp('sent_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  quoteIdIdx: index('email_logs_quote_id_idx').on(table.quoteId),
+}));
 
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type NewEmailLog = typeof emailLogs.$inferInsert;

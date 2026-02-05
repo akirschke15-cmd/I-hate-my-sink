@@ -8,6 +8,7 @@ import {
   decimal,
   integer,
   pgEnum,
+  index,
 } from 'drizzle-orm/pg-core';
 import { companies } from './companies';
 
@@ -50,7 +51,12 @@ export const sinks = pgTable('sinks', {
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  companyIdIdx: index('sinks_company_id_idx').on(table.companyId),
+  isActiveIdx: index('sinks_is_active_idx').on(table.isActive),
+  materialIdx: index('sinks_material_idx').on(table.material),
+  mountingStyleIdx: index('sinks_mounting_style_idx').on(table.mountingStyle),
+}));
 
 export type Sink = typeof sinks.$inferSelect;
 export type NewSink = typeof sinks.$inferInsert;
