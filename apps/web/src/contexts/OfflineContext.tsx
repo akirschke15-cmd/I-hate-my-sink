@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { createTRPCProxyClient, httpBatchLink, TRPCClientError } from '@trpc/client';
+import SuperJSON from 'superjson';
 import type { AppRouter } from '@ihms/api';
 import {
   getPendingSyncs,
@@ -152,6 +153,7 @@ function createStandaloneTRPCClient() {
     links: [
       httpBatchLink({
         url: '/trpc',
+        transformer: SuperJSON,
         headers() {
           const token = localStorage.getItem('accessToken');
           return token

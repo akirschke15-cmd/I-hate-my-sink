@@ -1,6 +1,6 @@
 import { createTRPCReact } from '@trpc/react-query';
 import { httpBatchLink, TRPCClientError } from '@trpc/client';
-import superjson from 'superjson';
+import SuperJSON from 'superjson';
 import type { AppRouter } from '@ihms/api';
 
 // WORKAROUND: tRPC v11 + TypeScript 5.3+ + moduleResolution:"bundler" causes type
@@ -114,6 +114,7 @@ export function createTRPCClient() {
     links: [
       httpBatchLink({
         url: '/trpc',
+        transformer: SuperJSON,
         headers() {
           const token = getAuthToken();
           return token
@@ -124,7 +125,6 @@ export function createTRPCClient() {
         },
       }),
     ],
-    transformer: superjson,
   });
 }
 
