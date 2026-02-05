@@ -13,8 +13,8 @@ export function DashboardPage() {
   const { data: quotes, isError: quotesError, error: quotesErrorMsg } = trpc.quote.list.useQuery({ limit: 5 });
   const { data: sinks, isError: sinksError, error: sinksErrorMsg } = trpc.sink.list.useQuery({ limit: 1 });
 
-  const customerCount = customers?.length || 0;
-  const quoteCount = quotes?.length || 0;
+  const customerCount = customers?.total || 0;
+  const quoteCount = quotes?.total || 0;
   const sinkCount = sinks?.total || 0;
 
   return (
@@ -162,7 +162,7 @@ export function DashboardPage() {
             link="/customers"
           />
           <StatCard
-            title="Active Quotes"
+            title="Total Quotes"
             value={quoteCount.toString()}
             icon={
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,8 +310,8 @@ export function DashboardPage() {
                 <p className="text-sm text-gray-500">Latest additions</p>
               </div>
               <nav className="divide-y divide-gray-200" aria-label="Recent customers">
-                {customers && customers.length > 0 ? (
-                  customers.slice(0, 5).map((customer: { id: string; firstName: string; lastName: string; email?: string | null }) => (
+                {customers && customers.items && customers.items.length > 0 ? (
+                  customers.items.slice(0, 5).map((customer: { id: string; firstName: string; lastName: string; email?: string | null }) => (
                     <Link
                       key={customer.id}
                       to={`/customers/${customer.id}`}
@@ -356,7 +356,7 @@ export function DashboardPage() {
                   </div>
                 )}
               </nav>
-              {customers && customers.length > 0 && (
+              {customers && customers.items && customers.items.length > 0 && (
                 <div className="border-t border-gray-200 px-6 py-3">
                   <Link
                     to="/customers"

@@ -141,7 +141,7 @@ export function NewQuotePage() {
           {/* Customer Selection */}
           <CustomerSelection
             customerId={quoteForm.customerId}
-            customers={customersData}
+            customers={customersData?.items}
             measurement={measurement}
             error={quoteForm.errors.customer}
             onChange={quoteForm.setCustomerId}

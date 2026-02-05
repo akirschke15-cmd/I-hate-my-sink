@@ -77,8 +77,8 @@ export const quotesAnalyticsRouter = router({
       }
 
       const totalQuotes = allQuotes.length;
-      const decidedQuotes = byStatus.accepted + byStatus.rejected + byStatus.expired;
-      const conversionRate = decidedQuotes > 0 ? byStatus.accepted / decidedQuotes : 0;
+      // Conversion rate = accepted / total quotes (not just decided quotes)
+      const conversionRate = totalQuotes > 0 ? byStatus.accepted / totalQuotes : 0;
       const viewedQuotes = byStatus.viewed + byStatus.accepted + byStatus.rejected;
       const viewToAcceptRate = viewedQuotes > 0 ? byStatus.accepted / viewedQuotes : 0;
 

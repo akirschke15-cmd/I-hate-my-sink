@@ -80,7 +80,7 @@ export function CustomersPage() {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" aria-hidden="true" />
             <span className="sr-only">Loading customers...</span>
           </div>
-        ) : customers?.length === 0 ? (
+        ) : customers?.items?.length === 0 ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-soft" role="status">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center shadow-md" aria-hidden="true">
               <svg
@@ -105,7 +105,7 @@ export function CustomersPage() {
           </div>
         ) : (
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Customer list">
-            {customers?.map((customer: { id: string; firstName: string; lastName: string; email?: string | null; phone?: string | null; address?: { city?: string; state?: string } | null }) => {
+            {customers?.items?.map((customer: { id: string; firstName: string; lastName: string; email?: string | null; phone?: string | null; address?: { city?: string; state?: string } | null }) => {
               const initials = `${customer.firstName.charAt(0)}${customer.lastName.charAt(0)}`.toUpperCase();
 
               return (

@@ -18,6 +18,8 @@
     "db:seed:user": "tsx scripts/seed-demo-user.ts",
     "db:seed:sinks": "tsx scripts/seed-demo-sinks.ts",
     "db:seed:rbac": "tsx scripts/seed-demo-users-rbac.ts",
+    "db:seed:statistics": "tsx scripts/seed-demo-statistics.ts",
+    "db:verify:statistics": "tsx scripts/verify-statistics.ts",
     "db:seed:all": "tsx scripts/seed-demo-user.ts && tsx scripts/seed-demo-sinks.ts && tsx scripts/seed-demo-users-rbac.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""

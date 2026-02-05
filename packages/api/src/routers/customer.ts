@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc';
 import { db } from '@ihms/db';
 import { customers } from '@ihms/db/schema';
-import { eq, ilike, or, desc, and } from 'drizzle-orm';
+import { eq, ilike, or, desc, and, sql } from 'drizzle-orm';
 import { createCustomerSchema, updateCustomerSchema } from '@ihms/shared';
 import { isSalesperson } from '../utils/rbac';
 
@@ -37,24 +37,38 @@ export const customerRouter = router({
         );
       }
 
+      const whereClause = and(...conditions);
+
       const results = await db.query.customers.findMany({
-        where: and(...conditions),
+        where: whereClause,
         limit: input.limit,
         offset: input.offset,
         orderBy: [desc(customers.createdAt)],
       });
 
-      return results.map((customer) => ({
-        id: customer.id,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.email,
-        phone: customer.phone,
-        address: customer.address,
-        notes: customer.notes,
-        createdAt: customer.createdAt,
-        updatedAt: customer.updatedAt,
-      }));
+      // Get total count
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(customers)
+        .where(whereClause);
+
+      const total = Number(countResult[0]?.count ?? 0);
+
+      return {
+        items: results.map((customer) => ({
+          id: customer.id,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+          address: customer.address,
+          notes: customer.notes,
+          createdAt: customer.createdAt,
+          updatedAt: customer.updatedAt,
+        })),
+        total,
+        hasMore: input.offset + results.length < total,
+      };
     }),
 
   // Get single customer by ID
