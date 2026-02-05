@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import jwt from 'jsonwebtoken';
+import superjson from 'superjson';
 import type { UserRole } from '@ihms/shared';
 import { jwtConfig } from './config/jwt';
 import { authLogger, securityLogger } from './lib/logger';
@@ -62,7 +63,9 @@ export function createContext({ req }: CreateExpressContextOptions): Context {
   }
 }
 
-const t = initTRPC.context<Context>().create();
+const t = initTRPC.context<Context>().create({
+  transformer: superjson,
+});
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
