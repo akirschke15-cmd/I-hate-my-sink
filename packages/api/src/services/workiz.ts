@@ -1,4 +1,5 @@
 import type { Quote, Customer, Company } from '@ihms/db/schema';
+import { workizLogger } from '../lib/logger';
 
 export interface WorkizJobInput {
   quote: Quote;
@@ -45,10 +46,13 @@ export async function createWorkizJob(
   }
 
   // STUB: In production, this would make a real API call
-  console.log('[WORKIZ STUB] Creating job for quote:', input.quote.quoteNumber);
-  console.log('[WORKIZ STUB] Customer:', `${input.customer.firstName} ${input.customer.lastName}`);
-  console.log('[WORKIZ STUB] Total:', input.quote.total);
-  console.log('[WORKIZ STUB] Line items:', input.lineItems.length);
+  workizLogger.info({
+    quoteNumber: input.quote.quoteNumber,
+    customerName: `${input.customer.firstName} ${input.customer.lastName}`,
+    total: input.quote.total,
+    lineItemCount: input.lineItems.length,
+    mode: 'stub',
+  }, 'Creating Workiz job (stub)');
 
   // Simulate API latency
   await new Promise((resolve) => setTimeout(resolve, 500));

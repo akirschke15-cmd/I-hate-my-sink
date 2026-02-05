@@ -3,6 +3,7 @@ import type { CreateExpressContextOptions } from '@trpc/server/adapters/express'
 import jwt from 'jsonwebtoken';
 import type { UserRole } from '@ihms/shared';
 import { jwtConfig } from './config/jwt';
+import { authLogger, securityLogger } from './lib/logger';
 
 export interface TokenPayload {
   userId: string;
@@ -31,33 +32,31 @@ export function createContext({ req }: CreateExpressContextOptions): Context {
 
     // Validate payload structure
     if (!payload.userId || !payload.companyId || !payload.role) {
-      console.warn('[AUTH] Invalid JWT payload structure - missing required fields', {
+      authLogger.warn({
         hasUserId: !!payload.userId,
         hasCompanyId: !!payload.companyId,
         hasRole: !!payload.role,
-      });
+      }, 'Invalid JWT payload structure - missing required fields');
       return { user: null };
     }
 
     // Validate role is a valid enum value
     if (!['admin', 'salesperson'].includes(payload.role)) {
-      console.error('[SECURITY] Invalid role in JWT', {
+      securityLogger.error({
         role: payload.role,
         userId: payload.userId,
-      });
+      }, 'Invalid role in JWT');
       return { user: null };
     }
 
     return { user: payload };
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      console.info('[AUTH] Expired token attempt');
+      authLogger.info('Expired token attempt');
     } else if (error instanceof jwt.JsonWebTokenError) {
-      console.warn('[SECURITY] Invalid JWT - possible tampering', {
-        error: error.message,
-      });
+      securityLogger.warn({ error: error.message }, 'Invalid JWT - possible tampering');
     } else {
-      console.error('[AUTH] Unknown JWT verification error', { error });
+      authLogger.error({ error }, 'Unknown JWT verification error');
     }
     return { user: null };
   }

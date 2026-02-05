@@ -63,13 +63,14 @@ describe('Measurement Router', () => {
       userId: testUserId,
     });
 
-    // Create a test customer
+    // Create a test customer assigned to the test user (required for salesperson RBAC)
     const [customer] = await db
       .insert(customers)
       .values({
         companyId: testCompanyId,
         firstName: 'Measurement',
         lastName: `Customer${Date.now()}`,
+        assignedUserId: testUserId,
       })
       .returning();
 

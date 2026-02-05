@@ -2,6 +2,9 @@ import { db } from '@ihms/db';
 import { quotes, quoteLineItems } from '@ihms/db/schema';
 import { eq } from 'drizzle-orm';
 
+// Type for database or transaction
+type DbOrTx = typeof db;
+
 // Helper function to generate quote number
 export function generateQuoteNumber(): string {
   const date = new Date();
@@ -19,8 +22,16 @@ export function calculateLineTotal(quantity: number, unitPrice: number, discount
 }
 
 // Helper function to recalculate quote totals
-export async function recalculateQuoteTotals(quoteId: string, taxRate: number, discountAmount: number) {
-  const lineItems = await db
+// Accepts optional transaction parameter for atomic operations
+export async function recalculateQuoteTotals(
+  quoteId: string,
+  taxRate: number,
+  discountAmount: number,
+  dbOrTx?: DbOrTx
+) {
+  const database = dbOrTx ?? db;
+
+  const lineItems = await database
     .select({ lineTotal: quoteLineItems.lineTotal })
     .from(quoteLineItems)
     .where(eq(quoteLineItems.quoteId, quoteId));
@@ -28,9 +39,10 @@ export async function recalculateQuoteTotals(quoteId: string, taxRate: number, d
   const subtotal = lineItems.reduce((sum, item) => sum + parseFloat(item.lineTotal), 0);
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxAmount = Math.round(taxableAmount * taxRate * 100) / 100;
-  const total = Math.round((subtotal - discountAmount + taxAmount) * 100) / 100;
+  // Total uses taxableAmount (clamped) to ensure non-negative totals
+  const total = Math.round((taxableAmount + taxAmount) * 100) / 100;
 
-  await db
+  await database
     .update(quotes)
     .set({
       subtotal: subtotal.toString(),

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { createClient } from 'redis';
@@ -9,6 +10,9 @@ import { appRouter, createContext, expireStaleQuotes } from '@ihms/api';
 import { closeDb, checkDbHealth } from '@ihms/db';
 import { env } from './env';
 import { quotesPdfRouter } from './routes/quotes-pdf';
+import { logger, httpLogger, redisLogger, cronLogger } from './lib/logger';
+import { correlationMiddleware } from './middleware/correlation';
+import { csrfTokenGenerator, csrfProtection } from './middleware/csrf';
 
 const app = express();
 
@@ -22,7 +26,7 @@ async function initializeRedis() {
       socket: {
         reconnectStrategy: (retries) => {
           if (retries > 10) {
-            console.error('Redis connection failed after 10 retries, using in-memory rate limiting');
+            redisLogger.error({ retries }, 'Redis connection failed after max retries, using in-memory rate limiting');
             return new Error('Redis max retries exceeded');
           }
           return Math.min(retries * 100, 3000);
@@ -31,23 +35,23 @@ async function initializeRedis() {
     });
 
     redisClient.on('error', (err) => {
-      console.error('Redis Client Error:', err.message);
+      redisLogger.error({ err: err.message }, 'Redis client error');
     });
 
     redisClient.on('connect', () => {
-      console.log('Redis connected for rate limiting');
+      redisLogger.info('Redis connected for rate limiting');
     });
 
     redisClient.on('ready', () => {
-      console.log('Redis ready for rate limiting');
+      redisLogger.info('Redis ready for rate limiting');
     });
 
     await redisClient.connect();
 
-    console.log('Redis-backed rate limiting initialized successfully');
+    redisLogger.info('Redis-backed rate limiting initialized successfully');
   } catch (error) {
-    console.error('Failed to connect to Redis for rate limiting:', error);
-    console.warn('⚠️ WARNING: Falling back to in-memory rate limiting. This is not suitable for production with multiple server instances.');
+    redisLogger.error({ error }, 'Failed to connect to Redis for rate limiting');
+    redisLogger.warn('Falling back to in-memory rate limiting. This is not suitable for production with multiple server instances.');
     redisClient = null;
   }
 }
@@ -89,6 +93,15 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
+
+// Add correlation ID middleware for request tracing
+app.use(correlationMiddleware);
+
+// CSRF Protection (defense-in-depth for cookie-based endpoints)
+// Note: tRPC endpoints use JWT Bearer tokens and are immune to CSRF
+// This protects REST endpoints that may use cookies in the future
+app.use(csrfTokenGenerator);
 
 // Rate limiting for auth endpoints
 // Note: tRPC uses POST requests with procedure names in the path for non-batched requests
@@ -180,8 +193,9 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-// REST API routes
-app.use('/api/quotes', quotesPdfRouter);
+// REST API routes with CSRF protection
+// Note: PDF endpoints use Bearer token auth, but we apply CSRF for defense-in-depth
+app.use('/api/quotes', csrfProtection, quotesPdfRouter);
 
 // tRPC handler
 app.use(
@@ -194,19 +208,18 @@ app.use(
 
 // Start server
 const server = app.listen(env.PORT, () => {
-  console.log(`Server running on http://localhost:${env.PORT}`);
-  console.log(`Environment: ${env.NODE_ENV}`);
-  console.log(`tRPC endpoint: http://localhost:${env.PORT}/trpc`);
+  httpLogger.info({ port: env.PORT, env: env.NODE_ENV }, 'Server started');
+  httpLogger.info({ trpcEndpoint: `http://localhost:${env.PORT}/trpc` }, 'tRPC endpoint available');
 });
 
 // Background job: Expire stale quotes
 // Run on startup
 expireStaleQuotes()
   .then((count) => {
-    console.log(`[STARTUP] Expired ${count} stale quotes`);
+    cronLogger.info({ count, event: 'startup' }, 'Expired stale quotes on startup');
   })
   .catch((error) => {
-    console.error('[STARTUP] Failed to expire quotes:', error);
+    cronLogger.error({ error, event: 'startup' }, 'Failed to expire quotes on startup');
   });
 
 // Run every hour
@@ -217,47 +230,47 @@ expireQuotesIntervalId = setInterval(async () => {
   try {
     const count = await expireStaleQuotes();
     if (count > 0) {
-      console.log(`[CRON] Expired ${count} quotes`);
+      cronLogger.info({ count }, 'Expired stale quotes');
     }
   } catch (error) {
-    console.error('[CRON] Failed to expire quotes:', error);
+    cronLogger.error({ error }, 'Failed to expire quotes');
   }
 }, EXPIRE_QUOTES_INTERVAL);
 
 // Graceful shutdown - clean up connections properly
 async function gracefulShutdown(signal: string) {
-  console.log(`${signal} received, shutting down gracefully...`);
+  logger.info({ signal }, 'Shutting down gracefully');
 
   // Stop background jobs
   if (expireQuotesIntervalId) {
     clearInterval(expireQuotesIntervalId);
-    console.log('Background jobs stopped');
+    cronLogger.info('Background jobs stopped');
   }
 
   // Stop accepting new connections
   server.close(async () => {
-    console.log('HTTP server closed');
+    httpLogger.info('HTTP server closed');
 
     // Close Redis connection
     if (redisClient) {
       try {
         await redisClient.quit();
-        console.log('Redis connection closed');
+        redisLogger.info('Redis connection closed');
       } catch (error) {
-        console.error('Error closing Redis connection:', error);
+        redisLogger.error({ error }, 'Error closing Redis connection');
       }
     }
 
     // Close database connections
     await closeDb();
 
-    console.log('Graceful shutdown complete');
+    logger.info('Graceful shutdown complete');
     process.exit(0);
   });
 
   // Force shutdown after 10 seconds if graceful shutdown fails
   setTimeout(() => {
-    console.error('Forced shutdown after timeout');
+    logger.error('Forced shutdown after timeout');
     process.exit(1);
   }, 10000);
 }

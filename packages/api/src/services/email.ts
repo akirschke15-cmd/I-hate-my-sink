@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { emailLogger } from '../lib/logger';
 
 export interface SendEmailInput {
   to: string;
@@ -36,14 +37,15 @@ export async function sendEmail(
 ): Promise<SendEmailResult> {
   // Dev mode: log and return success without sending
   if (isDev && !apiKey) {
-    console.log('[DEV EMAIL] Would send email:', {
+    emailLogger.info({
       to: input.to,
       toName: input.toName,
       subject: input.subject,
       from: `${input.fromName} <${input.fromAddress}>`,
       hasAttachments: !!input.attachments?.length,
       attachmentCount: input.attachments?.length || 0,
-    });
+      mode: 'dev',
+    }, 'Would send email (dev mode)');
     return { success: true, messageId: `dev-${Date.now()}` };
   }
 
@@ -63,14 +65,14 @@ export async function sendEmail(
     });
 
     if (error) {
-      console.error('[EMAIL ERROR]', error);
+      emailLogger.error({ error }, 'Failed to send email');
       return { success: false, error: error.message };
     }
 
     return { success: true, messageId: data?.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[EMAIL ERROR]', message);
+    emailLogger.error({ error: message }, 'Failed to send email');
     return { success: false, error: message };
   }
 }

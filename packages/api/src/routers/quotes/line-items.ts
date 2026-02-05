@@ -6,12 +6,24 @@ import { quotes, quoteLineItems } from '@ihms/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { calculateLineTotal, recalculateQuoteTotals } from './utils';
 import { addLineItemSchema, updateLineItemSchema } from './schemas';
+import { isSalesperson } from '../../utils/rbac';
 
 export const quotesLineItemsRouter = router({
   // Add line item to quote
-  addLineItem: protectedProcedure.input(addLineItemSchema).mutation(async ({ input }) => {
+  addLineItem: protectedProcedure.input(addLineItemSchema).mutation(async ({ ctx, input }) => {
+    // Verify quote belongs to user's company (and user if salesperson)
+    const conditions = [
+      eq(quotes.id, input.quoteId),
+      eq(quotes.companyId, ctx.user.companyId),
+    ];
+
+    // If salesperson, also verify they created the quote
+    if (isSalesperson(ctx.user.role)) {
+      conditions.push(eq(quotes.createdById, ctx.user.userId));
+    }
+
     const quote = await db.query.quotes.findFirst({
-      where: eq(quotes.id, input.quoteId),
+      where: and(...conditions),
     });
 
     if (!quote) {
@@ -57,12 +69,22 @@ export const quotesLineItemsRouter = router({
   }),
 
   // Update line item
-  updateLineItem: protectedProcedure.input(updateLineItemSchema).mutation(async ({ input }) => {
+  updateLineItem: protectedProcedure.input(updateLineItemSchema).mutation(async ({ ctx, input }) => {
     const { id, quoteId, ...updateData } = input;
 
-    // Verify quote exists
+    // Verify quote belongs to user's company (and user if salesperson)
+    const conditions = [
+      eq(quotes.id, quoteId),
+      eq(quotes.companyId, ctx.user.companyId),
+    ];
+
+    // If salesperson, also verify they created the quote
+    if (isSalesperson(ctx.user.role)) {
+      conditions.push(eq(quotes.createdById, ctx.user.userId));
+    }
+
     const quote = await db.query.quotes.findFirst({
-      where: eq(quotes.id, quoteId),
+      where: and(...conditions),
     });
 
     if (!quote) {
@@ -120,10 +142,20 @@ export const quotesLineItemsRouter = router({
   // Delete line item
   deleteLineItem: protectedProcedure
     .input(z.object({ id: z.string().uuid(), quoteId: z.string().uuid() }))
-    .mutation(async ({ input }) => {
-      // Verify quote exists
+    .mutation(async ({ ctx, input }) => {
+      // Verify quote belongs to user's company (and user if salesperson)
+      const conditions = [
+        eq(quotes.id, input.quoteId),
+        eq(quotes.companyId, ctx.user.companyId),
+      ];
+
+      // If salesperson, also verify they created the quote
+      if (isSalesperson(ctx.user.role)) {
+        conditions.push(eq(quotes.createdById, ctx.user.userId));
+      }
+
       const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, input.quoteId),
+        where: and(...conditions),
       });
 
       if (!quote) {

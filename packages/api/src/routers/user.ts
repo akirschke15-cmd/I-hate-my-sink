@@ -91,6 +91,8 @@ export const userRouter = router({
         role: user.role,
         isActive: user.isActive,
         lastLoginAt: user.lastLoginAt,
+        failedLoginAttempts: user.failedLoginAttempts,
+        lockedUntil: user.lockedUntil,
         createdAt: user.createdAt,
       }));
     }),
@@ -135,6 +137,44 @@ export const userRouter = router({
       return {
         id: updated.id,
         isActive: updated.isActive,
+      };
+    }),
+
+  // Admin: Unlock user account (reset failed login attempts)
+  unlockAccount: adminProcedure
+    .input(
+      z.object({
+        userId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await db.query.users.findFirst({
+        where: and(eq(users.id, input.userId), eq(users.companyId, ctx.user.companyId)),
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found',
+        });
+      }
+
+      const [updated] = await db
+        .update(users)
+        .set({
+          failedLoginAttempts: 0,
+          lastFailedLoginAt: null,
+          lockedUntil: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, input.userId))
+        .returning();
+
+      return {
+        id: updated.id,
+        email: updated.email,
+        failedLoginAttempts: updated.failedLoginAttempts,
+        lockedUntil: updated.lockedUntil,
       };
     }),
 });

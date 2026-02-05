@@ -76,48 +76,53 @@ export const quotesCrudRouter = router({
       });
     }
 
-    // Create quote
-    const [quote] = await db
-      .insert(quotes)
-      .values({
-        companyId: ctx.user.companyId,
-        customerId: input.customerId,
-        measurementId: input.measurementId,
-        createdById: ctx.user.userId,
-        quoteNumber,
-        status: 'draft',
-        taxRate: input.taxRate.toString(),
-        discountAmount: input.discountAmount.toString(),
-        validUntil: input.validUntil ? new Date(input.validUntil) : null,
-        notes: input.notes,
-        localId: input.localId,
-        syncedAt: new Date(),
-      })
-      .returning();
+    // Wrap quote creation in transaction for data integrity
+    const quoteId = await db.transaction(async (tx) => {
+      // Create quote
+      const [quote] = await tx
+        .insert(quotes)
+        .values({
+          companyId: ctx.user.companyId,
+          customerId: input.customerId,
+          measurementId: input.measurementId,
+          createdById: ctx.user.userId,
+          quoteNumber,
+          status: 'draft',
+          taxRate: input.taxRate.toString(),
+          discountAmount: input.discountAmount.toString(),
+          validUntil: input.validUntil ? new Date(input.validUntil) : null,
+          notes: input.notes,
+          localId: input.localId,
+          syncedAt: new Date(),
+        })
+        .returning();
 
-    // Create line items
-    const lineItemsToInsert = input.lineItems.map((item, index) => ({
-      quoteId: quote.id,
-      sinkId: item.sinkId,
-      type: item.type,
-      name: item.name,
-      description: item.description,
-      sku: item.sku,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice.toString(),
-      discountPercent: item.discountPercent.toString(),
-      lineTotal: calculateLineTotal(item.quantity, item.unitPrice, item.discountPercent).toString(),
-      sortOrder: index,
-    }));
+      // Create line items
+      const lineItemsToInsert = input.lineItems.map((item, index) => ({
+        quoteId: quote.id,
+        sinkId: item.sinkId,
+        type: item.type,
+        name: item.name,
+        description: item.description,
+        sku: item.sku,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice.toString(),
+        discountPercent: item.discountPercent.toString(),
+        lineTotal: calculateLineTotal(item.quantity, item.unitPrice, item.discountPercent).toString(),
+        sortOrder: index,
+      }));
 
-    await db.insert(quoteLineItems).values(lineItemsToInsert);
+      await tx.insert(quoteLineItems).values(lineItemsToInsert);
 
-    // Recalculate totals
-    await recalculateQuoteTotals(quote.id, input.taxRate, input.discountAmount);
+      // Recalculate totals within transaction
+      await recalculateQuoteTotals(quote.id, input.taxRate, input.discountAmount, tx);
 
-    // Fetch and return complete quote with relations
+      return quote.id;
+    });
+
+    // Fetch and return complete quote with relations (after transaction commits)
     return db.query.quotes.findFirst({
-      where: eq(quotes.id, quote.id),
+      where: eq(quotes.id, quoteId),
       with: {
         lineItems: {
           orderBy: [asc(quoteLineItems.sortOrder)],

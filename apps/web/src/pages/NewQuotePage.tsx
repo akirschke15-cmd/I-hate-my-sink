@@ -1,35 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { trpc } from '../lib/trpc';
-import { Button, Input, Select } from '../components/ui';
-
-const LINE_ITEM_TYPES = [
-  { value: 'product', label: 'Product' },
-  { value: 'labor', label: 'Labor' },
-  { value: 'material', label: 'Material' },
-  { value: 'other', label: 'Other' },
-];
-
-type LineItemType = 'product' | 'labor' | 'material' | 'other';
-
-interface LineItem {
-  id: string;
-  sinkId?: string;
-  type: LineItemType;
-  name: string;
-  description?: string;
-  sku?: string;
-  quantity: number;
-  unitPrice: number;
-  discountPercent: number;
-}
-
-interface Customer {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-}
+import { Button } from '../components/ui';
+import {
+  CustomerSelection,
+  LineItemsTable,
+  AddLineItemForm,
+  QuoteDetails,
+  QuoteSummary,
+} from '../components/quote';
+import { useQuoteForm } from '../hooks/useQuoteForm';
+import { useLineItems, LineItem as LineItemType } from '../hooks/useLineItems';
+import { useQuoteCalculations } from '../hooks/useQuoteCalculations';
 
 export function NewQuotePage() {
   const navigate = useNavigate();
@@ -38,33 +20,20 @@ export function NewQuotePage() {
   const measurementId = searchParams.get('measurementId') || undefined;
   const sinkId = searchParams.get('sinkId') || undefined;
 
-  const [customerId, setCustomerId] = useState('');
-  const [taxRate, setTaxRate] = useState(8.25); // Default 8.25%
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [validUntil, setValidUntil] = useState('');
-  const [notes, setNotes] = useState('');
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [showAddItem, setShowAddItem] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // New line item form state
-  const [newItemType, setNewItemType] = useState<LineItemType>('product');
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemDescription, setNewItemDescription] = useState('');
-  const [newItemSku, setNewItemSku] = useState('');
-  const [newItemQuantity, setNewItemQuantity] = useState(1);
-  const [newItemUnitPrice, setNewItemUnitPrice] = useState(0);
-  const [newItemDiscountPercent, setNewItemDiscountPercent] = useState(0);
-  const [newItemErrors, setNewItemErrors] = useState<Record<string, string>>({});
+  // Custom hooks for form management
+  const quoteForm = useQuoteForm();
+  const lineItemsManager = useLineItems();
+  const calculations = useQuoteCalculations(
+    lineItemsManager.lineItems,
+    quoteForm.taxRate,
+    quoteForm.discountAmount
+  );
 
   // Fetch customers
   const { data: customersData } = trpc.customer.list.useQuery({ limit: 100 });
 
   // Fetch sink if sinkId provided
-  const { data: sink } = trpc.sink.getById.useQuery(
-    { id: sinkId! },
-    { enabled: !!sinkId }
-  );
+  const { data: sink } = trpc.sink.getById.useQuery({ id: sinkId! }, { enabled: !!sinkId });
 
   // Fetch measurement if measurementId provided
   const { data: measurement } = trpc.measurement.get.useQuery(
@@ -75,7 +44,6 @@ export function NewQuotePage() {
   // Create quote mutation
   const createQuote = trpc.quote.create.useMutation({
     onSuccess: (quote: { id: string } | undefined) => {
-      // Invalidate the quotes list so it refetches
       utils.quote.list.invalidate();
       if (quote) {
         navigate(`/quotes/${quote.id}`);
@@ -85,8 +53,8 @@ export function NewQuotePage() {
 
   // Pre-populate with sink if provided
   useEffect(() => {
-    if (sink && lineItems.length === 0) {
-      const sinkLineItem: LineItem = {
+    if (sink && lineItemsManager.lineItems.length === 0) {
+      const sinkLineItem: LineItemType = {
         id: `temp-${Date.now()}`,
         sinkId: sink.id,
         type: 'product',
@@ -98,7 +66,7 @@ export function NewQuotePage() {
       };
 
       const laborCost = parseFloat(sink.laborCost);
-      const items: LineItem[] = [sinkLineItem];
+      const items: LineItemType[] = [sinkLineItem];
 
       if (laborCost > 0) {
         items.push({
@@ -112,139 +80,30 @@ export function NewQuotePage() {
         });
       }
 
-      setLineItems(items);
+      lineItemsManager.setLineItems(items);
     }
-  }, [sink, lineItems.length]);
+  }, [sink, lineItemsManager.lineItems.length]);
 
   // Pre-select customer if measurement has one
   useEffect(() => {
-    if (measurement && !customerId) {
-      setCustomerId(measurement.customerId);
+    if (measurement && !quoteForm.customerId) {
+      quoteForm.setCustomerId(measurement.customerId);
     }
-  }, [measurement, customerId]);
-
-  // Calculate totals
-  const { subtotal, taxAmount, total } = useMemo(() => {
-    const sub = lineItems.reduce((sum, item) => {
-      const lineTotal = item.quantity * item.unitPrice * (1 - item.discountPercent / 100);
-      return sum + lineTotal;
-    }, 0);
-    const taxable = Math.max(0, sub - discountAmount);
-    const tax = taxable * (taxRate / 100);
-    const tot = sub - discountAmount + tax;
-    return {
-      subtotal: Math.round(sub * 100) / 100,
-      taxAmount: Math.round(tax * 100) / 100,
-      total: Math.round(tot * 100) / 100,
-    };
-  }, [lineItems, taxRate, discountAmount]);
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(price);
-  };
-
-  const validateLineItem = () => {
-    const itemErrors: Record<string, string> = {};
-
-    if (!newItemName.trim()) {
-      itemErrors.name = 'Item name is required';
-    }
-
-    if (newItemQuantity < 1) {
-      itemErrors.quantity = 'Quantity must be at least 1';
-    }
-
-    if (newItemUnitPrice < 0) {
-      itemErrors.unitPrice = 'Price cannot be negative';
-    }
-
-    if (newItemUnitPrice === 0) {
-      itemErrors.unitPrice = 'Price must be greater than 0';
-    }
-
-    if (newItemDiscountPercent < 0 || newItemDiscountPercent > 100) {
-      itemErrors.discountPercent = 'Discount must be between 0 and 100';
-    }
-
-    setNewItemErrors(itemErrors);
-    return Object.keys(itemErrors).length === 0;
-  };
-
-  const handleAddLineItem = () => {
-    if (!validateLineItem()) return;
-
-    const newItem: LineItem = {
-      id: `temp-${Date.now()}`,
-      type: newItemType,
-      name: newItemName,
-      description: newItemDescription || undefined,
-      sku: newItemSku || undefined,
-      quantity: newItemQuantity,
-      unitPrice: newItemUnitPrice,
-      discountPercent: newItemDiscountPercent,
-    };
-
-    setLineItems([...lineItems, newItem]);
-    setShowAddItem(false);
-    resetNewItemForm();
-  };
-
-  const resetNewItemForm = () => {
-    setNewItemType('product');
-    setNewItemName('');
-    setNewItemDescription('');
-    setNewItemSku('');
-    setNewItemQuantity(1);
-    setNewItemUnitPrice(0);
-    setNewItemDiscountPercent(0);
-    setNewItemErrors({});
-  };
-
-  const handleRemoveLineItem = (id: string) => {
-    setLineItems(lineItems.filter((item) => item.id !== id));
-  };
-
-  const validateQuote = () => {
-    const quoteErrors: Record<string, string> = {};
-
-    if (!customerId) {
-      quoteErrors.customer = 'Please select a customer';
-    }
-
-    if (lineItems.length === 0) {
-      quoteErrors.lineItems = 'Add at least one line item to the quote';
-    }
-
-    if (taxRate < 0 || taxRate > 100) {
-      quoteErrors.taxRate = 'Tax rate must be between 0 and 100';
-    }
-
-    if (discountAmount < 0) {
-      quoteErrors.discountAmount = 'Discount cannot be negative';
-    }
-
-    if (discountAmount > subtotal) {
-      quoteErrors.discountAmount = 'Discount cannot exceed subtotal';
-    }
-
-    setErrors(quoteErrors);
-    return Object.keys(quoteErrors).length === 0;
-  };
+  }, [measurement, quoteForm.customerId]);
 
   const handleSubmit = () => {
-    if (!validateQuote()) return;
+    if (!quoteForm.validateQuote(lineItemsManager.lineItems, calculations.subtotal)) {
+      return;
+    }
 
     createQuote.mutate({
-      customerId,
+      customerId: quoteForm.customerId,
       measurementId,
-      taxRate: taxRate / 100, // Convert to decimal
-      discountAmount,
-      validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
-      notes: notes || undefined,
-      lineItems: lineItems.map((item) => ({
+      taxRate: quoteForm.taxRate / 100, // Convert to decimal
+      discountAmount: quoteForm.discountAmount,
+      validUntil: quoteForm.validUntil ? new Date(quoteForm.validUntil).toISOString() : undefined,
+      notes: quoteForm.notes || undefined,
+      lineItems: lineItemsManager.lineItems.map((item) => ({
         sinkId: item.sinkId,
         type: item.type,
         name: item.name,
@@ -256,14 +115,6 @@ export function NewQuotePage() {
       })),
     });
   };
-
-  const customerOptions = useMemo(() => {
-    if (!customersData) return [];
-    return customersData.map((c: Customer) => ({
-      value: c.id,
-      label: `${c.firstName} ${c.lastName}${c.email ? ` (${c.email})` : ''}`,
-    }));
-  }, [customersData]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -286,360 +137,92 @@ export function NewQuotePage() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        {/* Customer Selection */}
-        <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Customer</h2>
-          <Select
-            label="Select Customer"
-            options={[{ value: '', label: 'Choose a customer...' }, ...customerOptions]}
-            value={customerId}
-            onChange={(e) => {
-              setCustomerId(e.target.value);
-              if (errors.customer) {
-                setErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.customer;
-                  return next;
-                });
-              }
-            }}
-            error={errors.customer}
+        <div className="space-y-6">
+          {/* Customer Selection */}
+          <CustomerSelection
+            customerId={quoteForm.customerId}
+            customers={customersData}
+            measurement={measurement}
+            error={quoteForm.errors.customer}
+            onChange={quoteForm.setCustomerId}
+            onClearError={() => quoteForm.clearError('customer')}
           />
-          {measurement && (
-            <p className="mt-2 text-sm text-gray-500">
-              Linked to measurement: {measurement.location || 'Measurement'} ({measurement.cabinetWidthInches}&quot; x {measurement.cabinetDepthInches}&quot;)
-            </p>
-          )}
-        </div>
 
-        {/* Line Items */}
-        <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex-1">
-              <h2 className="text-lg font-semibold text-gray-900">Line Items</h2>
-              {errors.lineItems && (
-                <p className="mt-1 flex items-center gap-1 text-sm text-red-600">
-                  <svg
-                    className="h-4 w-4 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>{errors.lineItems}</span>
-                </p>
-              )}
-            </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setShowAddItem(true);
-                if (errors.lineItems) {
-                  setErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.lineItems;
-                    return next;
-                  });
-                }
+          {/* Line Items */}
+          <LineItemsTable
+            lineItems={lineItemsManager.lineItems}
+            error={quoteForm.errors.lineItems}
+            formatPrice={calculations.formatPrice}
+            onRemoveItem={lineItemsManager.removeLineItem}
+            onAddClick={() => lineItemsManager.setShowAddItem(true)}
+            onClearError={() => quoteForm.clearError('lineItems')}
+          />
+
+          {/* Add Item Form */}
+          {lineItemsManager.showAddItem && (
+            <AddLineItemForm
+              formData={lineItemsManager.formData}
+              errors={lineItemsManager.errors}
+              onFieldChange={lineItemsManager.updateFormField}
+              onAdd={lineItemsManager.addLineItem}
+              onCancel={() => {
+                lineItemsManager.setShowAddItem(false);
+                lineItemsManager.resetForm();
               }}
+            />
+          )}
+
+          {/* Quote Details */}
+          <QuoteDetails
+            taxRate={quoteForm.taxRate}
+            discountAmount={quoteForm.discountAmount}
+            validUntil={quoteForm.validUntil}
+            notes={quoteForm.notes}
+            errors={{
+              taxRate: quoteForm.errors.taxRate,
+              discountAmount: quoteForm.errors.discountAmount,
+            }}
+            onTaxRateChange={quoteForm.setTaxRate}
+            onDiscountChange={quoteForm.setDiscountAmount}
+            onValidUntilChange={quoteForm.setValidUntil}
+            onNotesChange={quoteForm.setNotes}
+            onClearError={quoteForm.clearError}
+          />
+
+          {/* Summary */}
+          <QuoteSummary
+            subtotal={calculations.subtotal}
+            discountAmount={quoteForm.discountAmount}
+            taxRate={quoteForm.taxRate}
+            taxAmount={calculations.taxAmount}
+            total={calculations.total}
+            formatPrice={calculations.formatPrice}
+          />
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3">
+            <Link to="/quotes">
+              <Button variant="secondary">Cancel</Button>
+            </Link>
+            <Button
+              onClick={handleSubmit}
+              isLoading={createQuote.isPending}
+              disabled={
+                !quoteForm.customerId ||
+                lineItemsManager.lineItems.length === 0 ||
+                Object.keys(quoteForm.errors).length > 0
+              }
             >
-              Add Item
+              Create Quote
             </Button>
           </div>
 
-          {lineItems.length === 0 ? (
-            <p className="py-8 text-center text-gray-500">
-              No line items yet. Add products, labor, or materials.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {lineItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-200 p-4"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${
-                          item.type === 'product'
-                            ? 'bg-blue-100 text-blue-800'
-                            : item.type === 'labor'
-                              ? 'bg-green-100 text-green-800'
-                              : item.type === 'material'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {item.type}
-                      </span>
-                      <span className="font-medium text-gray-900">{item.name}</span>
-                      {item.sku && <span className="text-sm text-gray-500">({item.sku})</span>}
-                    </div>
-                    {item.description && (
-                      <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-                    )}
-                    <p className="mt-1 text-sm text-gray-600">
-                      {item.quantity} x {formatPrice(item.unitPrice)}
-                      {item.discountPercent > 0 && (
-                        <span className="ml-2 text-green-600">(-{item.discountPercent}%)</span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-medium text-gray-900">
-                      {formatPrice(
-                        item.quantity * item.unitPrice * (1 - item.discountPercent / 100)
-                      )}
-                    </span>
-                    <button
-                      onClick={() => handleRemoveLineItem(item.id)}
-                      className="text-gray-400 hover:text-red-600"
-                    >
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Add Item Form */}
-          {showAddItem && (
-            <div className="mt-4 rounded-lg border-2 border-dashed border-gray-300 p-4">
-              <h3 className="mb-3 font-medium text-gray-900">Add Line Item</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Type"
-                  options={LINE_ITEM_TYPES}
-                  value={newItemType}
-                  onChange={(e) => setNewItemType(e.target.value as LineItemType)}
-                />
-                <Input
-                  label="Name"
-                  value={newItemName}
-                  onChange={(e) => {
-                    setNewItemName(e.target.value);
-                    if (newItemErrors.name) {
-                      setNewItemErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.name;
-                        return next;
-                      });
-                    }
-                  }}
-                  placeholder="Item name"
-                  error={newItemErrors.name}
-                  required
-                />
-                <Input
-                  label="SKU (optional)"
-                  value={newItemSku}
-                  onChange={(e) => setNewItemSku(e.target.value)}
-                  placeholder="SKU"
-                />
-                <Input
-                  label="Description (optional)"
-                  value={newItemDescription}
-                  onChange={(e) => setNewItemDescription(e.target.value)}
-                  placeholder="Description"
-                />
-                <Input
-                  label="Quantity"
-                  type="number"
-                  min={1}
-                  value={newItemQuantity}
-                  onChange={(e) => {
-                    setNewItemQuantity(parseInt(e.target.value) || 1);
-                    if (newItemErrors.quantity) {
-                      setNewItemErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.quantity;
-                        return next;
-                      });
-                    }
-                  }}
-                  error={newItemErrors.quantity}
-                  required
-                />
-                <Input
-                  label="Unit Price"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={newItemUnitPrice}
-                  onChange={(e) => {
-                    setNewItemUnitPrice(parseFloat(e.target.value) || 0);
-                    if (newItemErrors.unitPrice) {
-                      setNewItemErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.unitPrice;
-                        return next;
-                      });
-                    }
-                  }}
-                  error={newItemErrors.unitPrice}
-                  required
-                />
-                <Input
-                  label="Discount %"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={newItemDiscountPercent}
-                  onChange={(e) => {
-                    setNewItemDiscountPercent(parseFloat(e.target.value) || 0);
-                    if (newItemErrors.discountPercent) {
-                      setNewItemErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.discountPercent;
-                        return next;
-                      });
-                    }
-                  }}
-                  error={newItemErrors.discountPercent}
-                />
-              </div>
-              <div className="mt-4 flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleAddLineItem}
-                  disabled={Object.keys(newItemErrors).length > 0}
-                >
-                  Add
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setShowAddItem(false);
-                    resetNewItemForm();
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+          {createQuote.error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+              {createQuote.error.message}
             </div>
           )}
         </div>
-
-        {/* Quote Details */}
-        <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Quote Details</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="Tax Rate (%)"
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={taxRate}
-              onChange={(e) => {
-                setTaxRate(parseFloat(e.target.value) || 0);
-                if (errors.taxRate) {
-                  setErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.taxRate;
-                    return next;
-                  });
-                }
-              }}
-              error={errors.taxRate}
-            />
-            <Input
-              label="Discount Amount ($)"
-              type="number"
-              min={0}
-              step={0.01}
-              value={discountAmount}
-              onChange={(e) => {
-                setDiscountAmount(parseFloat(e.target.value) || 0);
-                if (errors.discountAmount) {
-                  setErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.discountAmount;
-                    return next;
-                  });
-                }
-              }}
-              error={errors.discountAmount}
-            />
-            <Input
-              label="Valid Until"
-              type="date"
-              value={validUntil}
-              onChange={(e) => setValidUntil(e.target.value)}
-            />
-          </div>
-          <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
-            <textarea
-              className="block w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes for the customer..."
-            />
-          </div>
-        </div>
-
-        {/* Totals */}
-        <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Summary</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between text-gray-600">
-              <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
-            </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Discount</span>
-                <span>-{formatPrice(discountAmount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-gray-600">
-              <span>Tax ({taxRate}%)</span>
-              <span>{formatPrice(taxAmount)}</span>
-            </div>
-            <div className="flex justify-between border-t border-gray-200 pt-2 text-lg font-bold text-gray-900">
-              <span>Total</span>
-              <span>{formatPrice(total)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-3">
-          <Link to="/quotes">
-            <Button variant="secondary">Cancel</Button>
-          </Link>
-          <Button
-            onClick={handleSubmit}
-            isLoading={createQuote.isPending}
-            disabled={!customerId || lineItems.length === 0 || Object.keys(errors).length > 0}
-          >
-            Create Quote
-          </Button>
-        </div>
-
-        {createQuote.error && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-            {createQuote.error.message}
-          </div>
-        )}
       </main>
     </div>
   );

@@ -211,4 +211,191 @@ describe('Auth Router', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('account lockout', () => {
+    const lockoutEmail = `lockout-test-${Date.now()}@example.com`;
+
+    beforeAll(async () => {
+      // Create a user for lockout tests
+      const caller = createTestCaller(createUnauthenticatedContext());
+      await caller.auth.register({
+        email: lockoutEmail,
+        password: testPassword,
+        firstName: 'Lockout',
+        lastName: 'Test',
+        companyId: testCompanyId,
+      });
+    });
+
+    it('should increment failed login attempts on wrong password', async () => {
+      const caller = createTestCaller(createUnauthenticatedContext());
+      const testEmail = generateTestEmail();
+
+      // Create test user
+      await caller.auth.register({
+        email: testEmail,
+        password: testPassword,
+        firstName: 'Fail',
+        lastName: 'Counter',
+        companyId: testCompanyId,
+      });
+
+      // Attempt login with wrong password
+      try {
+        await caller.auth.login({
+          email: testEmail,
+          password: 'WrongPassword123',
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(TRPCError);
+        if (error instanceof TRPCError) {
+          expect(error.message).toContain('4 attempt');
+        }
+      }
+    });
+
+    it('should lock account after 5 failed attempts', async () => {
+      const caller = createTestCaller(createUnauthenticatedContext());
+      const testEmail = generateTestEmail();
+
+      // Create test user
+      await caller.auth.register({
+        email: testEmail,
+        password: testPassword,
+        firstName: 'Lock',
+        lastName: 'Test',
+        companyId: testCompanyId,
+      });
+
+      // Attempt 5 failed logins
+      for (let i = 0; i < 5; i++) {
+        try {
+          await caller.auth.login({
+            email: testEmail,
+            password: 'WrongPassword123',
+          });
+        } catch (error) {
+          // Expected to fail
+        }
+      }
+
+      // 5th attempt should lock the account
+      try {
+        await caller.auth.login({
+          email: testEmail,
+          password: 'WrongPassword123',
+        });
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(TRPCError);
+        if (error instanceof TRPCError) {
+          expect(error.code).toBe('FORBIDDEN');
+          expect(error.message).toContain('locked');
+        }
+      }
+    });
+
+    it('should prevent login even with correct password when locked', async () => {
+      const caller = createTestCaller(createUnauthenticatedContext());
+      const testEmail = generateTestEmail();
+
+      // Create test user
+      await caller.auth.register({
+        email: testEmail,
+        password: testPassword,
+        firstName: 'Lock',
+        lastName: 'Verify',
+        companyId: testCompanyId,
+      });
+
+      // Lock the account with 5 failed attempts
+      for (let i = 0; i < 5; i++) {
+        try {
+          await caller.auth.login({
+            email: testEmail,
+            password: 'WrongPassword123',
+          });
+        } catch (error) {
+          // Expected to fail
+        }
+      }
+
+      // Try with correct password while locked
+      try {
+        await caller.auth.login({
+          email: testEmail,
+          password: testPassword,
+        });
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(TRPCError);
+        if (error instanceof TRPCError) {
+          expect(error.code).toBe('FORBIDDEN');
+          expect(error.message).toContain('locked');
+        }
+      }
+    });
+
+    it('should reset failed attempts on successful login', async () => {
+      const caller = createTestCaller(createUnauthenticatedContext());
+      const testEmail = generateTestEmail();
+
+      // Create test user
+      await caller.auth.register({
+        email: testEmail,
+        password: testPassword,
+        firstName: 'Reset',
+        lastName: 'Test',
+        companyId: testCompanyId,
+      });
+
+      // Fail 3 times
+      for (let i = 0; i < 3; i++) {
+        try {
+          await caller.auth.login({
+            email: testEmail,
+            password: 'WrongPassword123',
+          });
+        } catch (error) {
+          // Expected to fail
+        }
+      }
+
+      // Successful login should reset counter
+      const result = await caller.auth.login({
+        email: testEmail,
+        password: testPassword,
+      });
+
+      expect(result).toHaveProperty('accessToken');
+
+      // Should allow another 5 attempts before locking again
+      // Do 3 more failed attempts (counter now at 3)
+      for (let i = 0; i < 3; i++) {
+        try {
+          await caller.auth.login({
+            email: testEmail,
+            password: 'WrongPassword123',
+          });
+        } catch (error) {
+          // Expected to fail
+        }
+      }
+
+      // 4th attempt should not lock (2 attempts remaining)
+      try {
+        await caller.auth.login({
+          email: testEmail,
+          password: 'WrongPassword123',
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          expect(error.code).toBe('UNAUTHORIZED');
+          expect(error.message).toContain('attempt'); // 1 attempt remaining
+        }
+      }
+    });
+  });
 });

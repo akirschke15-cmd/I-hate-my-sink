@@ -137,13 +137,59 @@ export const authRouter = router({
       });
     }
 
+    // Check if account is locked
+    const now = new Date();
+    if (user.lockedUntil && user.lockedUntil > now) {
+      const remainingMinutes = Math.ceil((user.lockedUntil.getTime() - now.getTime()) / 60000);
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: `Account is locked due to too many failed login attempts. Please try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`,
+      });
+    }
+
     // Verify password
     const isValid = await bcrypt.compare(input.password, user.passwordHash);
 
     if (!isValid) {
+      // Increment failed login attempts
+      const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+      const MAX_FAILED_ATTEMPTS = 5;
+      const LOCKOUT_DURATION_MINUTES = 15;
+
+      // Calculate exponential backoff for lockout duration
+      // Base: 15 minutes, doubles for each set of 5 failed attempts beyond the first lockout
+      const lockoutMultiplier = Math.floor(failedAttempts / MAX_FAILED_ATTEMPTS);
+      const lockoutMinutes = LOCKOUT_DURATION_MINUTES * Math.pow(2, lockoutMultiplier);
+
+      const updateData: {
+        failedLoginAttempts: number;
+        lastFailedLoginAt: Date;
+        lockedUntil?: Date;
+      } = {
+        failedLoginAttempts: failedAttempts,
+        lastFailedLoginAt: now,
+      };
+
+      // Lock account if max attempts reached
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        updateData.lockedUntil = new Date(now.getTime() + lockoutMinutes * 60000);
+      }
+
+      await db.update(users).set(updateData).where(eq(users.id, user.id));
+
+      // Return specific error message if account is now locked
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `Account has been locked due to too many failed login attempts. Please try again in ${lockoutMinutes} minutes.`,
+        });
+      }
+
+      // Generic error message for failed attempts
+      const remainingAttempts = MAX_FAILED_ATTEMPTS - failedAttempts;
       throw new TRPCError({
         code: 'UNAUTHORIZED',
-        message: 'Invalid email or password',
+        message: `Invalid email or password. ${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining before account lockout.`,
       });
     }
 
@@ -159,8 +205,16 @@ export const authRouter = router({
       });
     }
 
-    // Update last login
-    await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+    // Successful login - reset failed attempts and unlock account
+    await db
+      .update(users)
+      .set({
+        lastLoginAt: now,
+        failedLoginAttempts: 0,
+        lastFailedLoginAt: null,
+        lockedUntil: null,
+      })
+      .where(eq(users.id, user.id));
 
     // Generate tokens
     const tokenPayload: TokenPayload = {
