@@ -66,8 +66,23 @@ export function AnalyticsPage() {
     return `${Math.round(value * 100)}%`;
   };
 
-  // Find max value for chart scaling
-  const maxQuotes = trends ? Math.max(...trends.map((t: TrendData) => t.quotes), 1) : 1;
+  // Find max value for chart scaling (minimum 1 to avoid division by zero)
+  const maxQuotes = trends && trends.length > 0
+    ? Math.max(...trends.map((t: TrendData) => t.quotes), 1)
+    : 1;
+
+  // Debug logging to help troubleshoot chart issues
+  if (typeof window !== 'undefined' && !trendsLoading) {
+    console.log('[Analytics] Trend Data:', {
+      dateRange,
+      trendParams,
+      trendsCount: trends?.length ?? 0,
+      maxQuotes,
+      hasError: trendsError,
+      errorMessage: trendsErrorMsg?.message,
+      sampleData: trends?.slice(0, 3),
+    });
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
@@ -110,10 +125,10 @@ export function AnalyticsPage() {
         {(analyticsError || trendsError || repsError) && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
             <p className="font-medium">Failed to load some analytics data</p>
-            <div className="text-sm mt-1">
-              {analyticsError && <div>{analyticsErrorMsg?.message || 'Analytics data unavailable'}</div>}
-              {trendsError && <div>{trendsErrorMsg?.message || 'Trends data unavailable'}</div>}
-              {repsError && <div>{repsErrorMsg?.message || 'Rep performance data unavailable'}</div>}
+            <div className="text-sm mt-1 space-y-1">
+              {analyticsError && <div><strong>Analytics:</strong> {analyticsErrorMsg?.message || 'Analytics data unavailable'}</div>}
+              {trendsError && <div><strong>Chart Data:</strong> {trendsErrorMsg?.message || 'Trends data unavailable'}</div>}
+              {repsError && <div><strong>Rep Performance:</strong> {repsErrorMsg?.message || 'Rep performance data unavailable'}</div>}
             </div>
           </div>
         )}
@@ -287,13 +302,14 @@ export function AnalyticsPage() {
                   ))}
                 </div>
               </div>
-            ) : trends && trends.length > 0 ? (
+            ) : trends && Array.isArray(trends) && trends.length > 0 ? (
               <>
                 <div className="rounded-lg bg-primary-50/30 p-4">
                   <div className="flex h-48 items-end gap-1">
                     {trends.map((t: TrendData, i: number) => {
-                      const height = (t.quotes / maxQuotes) * 100;
-                      const acceptedHeight = (t.accepted / maxQuotes) * 100;
+                      // Calculate heights with minimum 2% to ensure bars are visible
+                      const height = t.quotes > 0 ? Math.max((t.quotes / maxQuotes) * 100, 2) : 0;
+                      const acceptedHeight = t.accepted > 0 ? Math.max((t.accepted / maxQuotes) * 100, 2) : 0;
 
                       return (
                         <div
@@ -330,8 +346,12 @@ export function AnalyticsPage() {
                 </div>
               </>
             ) : (
-              <div className="flex h-48 items-center justify-center rounded-lg bg-primary-50/30 text-gray-500">
-                No data for selected period
+              <div className="flex h-48 flex-col items-center justify-center rounded-lg bg-primary-50/30 text-gray-500">
+                <svg className="h-12 w-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p className="font-medium">No data for selected period</p>
+                <p className="text-sm mt-1">Try selecting a different date range</p>
               </div>
             )}
           </div>

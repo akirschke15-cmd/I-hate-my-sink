@@ -317,9 +317,12 @@ router.get('/:id/pdf', async (req: Request, res: Response): Promise<void> => {
     doc.moveDown(1);
     doc.y = rowY + 10;
 
-    // Totals section (right-aligned)
-    const totalsX = 400;
-    const totalsValueX = 480;
+    // Totals section (right-aligned, within page margins)
+    // Adjusted to keep everything within bounds: rightMargin = 562
+    const totalsLabelX = 370;
+    const totalsLabelWidth = 110;
+    const totalsValueX = 482;
+    const totalsValueWidth = 80; // Ends at 562 (within right margin)
 
     const totalsData = [
       ['Subtotal:', formatCurrency(quote.subtotal)],
@@ -337,29 +340,26 @@ router.get('/:id/pdf', async (req: Request, res: Response): Promise<void> => {
 
     doc.font('Helvetica').fontSize(11);
     totalsData.forEach(([label, value]) => {
-      doc.fillColor('#6b7280').text(label, totalsX, doc.y, { continued: true });
-      doc.fillColor('#111827').text(value, totalsValueX, doc.y - 11, {
-        align: 'right',
-        width: 80,
-      });
+      const currentY = doc.y;
+      doc.fillColor('#6b7280').text(label, totalsLabelX, currentY, { width: totalsLabelWidth, align: 'right' });
+      doc.fillColor('#111827').text(value, totalsValueX, currentY, { width: totalsValueWidth, align: 'right' });
+      doc.moveDown(0.9);
     });
 
     // Total line
     doc
       .strokeColor('#e5e7eb')
       .lineWidth(1)
-      .moveTo(totalsX, doc.y + 5)
+      .moveTo(totalsLabelX, doc.y + 5)
       .lineTo(562, doc.y + 5)
       .stroke();
 
-    doc.moveDown(0.5);
+    doc.moveDown(0.8);
 
     doc.font('Helvetica-Bold').fontSize(14);
-    doc.fillColor('#111827').text('Total:', totalsX, doc.y, { continued: true });
-    doc.text(formatCurrency(quote.total), totalsValueX, doc.y - 14, {
-      align: 'right',
-      width: 80,
-    });
+    const totalY = doc.y;
+    doc.fillColor('#111827').text('Total:', totalsLabelX, totalY, { width: totalsLabelWidth, align: 'right' });
+    doc.text(formatCurrency(quote.total), totalsValueX, totalY, { width: totalsValueWidth, align: 'right' });
 
     doc.moveDown(2);
 

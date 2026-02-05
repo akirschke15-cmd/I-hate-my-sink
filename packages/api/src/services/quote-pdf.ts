@@ -237,9 +237,11 @@ export async function generateQuotePdfBuffer(
     doc.y = rowY + 8;
 
     // Totals section (right-aligned, within page margins)
-    const totalsLabelX = 380;
-    const totalsValueX = 460;
-    const totalsValueWidth = 100;
+    // Adjusted to keep everything within bounds: rightMargin = 562
+    const totalsLabelX = 370;
+    const totalsLabelWidth = 100;
+    const totalsValueX = 475;
+    const totalsValueWidth = 87; // Ends at 562 (within right margin)
 
     const totalsData: [string, string][] = [['Subtotal:', formatCurrency(quote.subtotal)]];
 
@@ -255,8 +257,10 @@ export async function generateQuotePdfBuffer(
 
     doc.font('Helvetica').fontSize(10);
     totalsData.forEach(([label, value]) => {
-      doc.fillColor('#6b7280').text(label, totalsLabelX, doc.y, { width: 75 });
-      doc.fillColor('#111827').text(value, totalsValueX, doc.y - 10, { align: 'right', width: totalsValueWidth });
+      const currentY = doc.y;
+      doc.fillColor('#6b7280').text(label, totalsLabelX, currentY, { width: totalsLabelWidth, align: 'right' });
+      doc.fillColor('#111827').text(value, totalsValueX, currentY, { width: totalsValueWidth, align: 'right' });
+      doc.moveDown(0.8);
     });
 
     doc
@@ -265,11 +269,12 @@ export async function generateQuotePdfBuffer(
       .moveTo(totalsLabelX, doc.y + 5)
       .lineTo(rightMargin, doc.y + 5)
       .stroke();
-    doc.moveDown(0.5);
+    doc.moveDown(0.8);
 
     doc.font('Helvetica-Bold').fontSize(12);
-    doc.fillColor('#111827').text('Total:', totalsLabelX, doc.y, { width: 75 });
-    doc.text(formatCurrency(quote.total), totalsValueX, doc.y - 12, { align: 'right', width: totalsValueWidth });
+    const totalY = doc.y;
+    doc.fillColor('#111827').text('Total:', totalsLabelX, totalY, { width: totalsLabelWidth, align: 'right' });
+    doc.text(formatCurrency(quote.total), totalsValueX, totalY, { width: totalsValueWidth, align: 'right' });
 
     doc.moveDown(1.5);
 

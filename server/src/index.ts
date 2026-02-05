@@ -214,9 +214,12 @@ const server = app.listen(env.PORT, () => {
 
 // Background job: Expire stale quotes
 // Run on startup
-expireStaleQuotes()
+expireStaleQuotes(env.QUOTE_EXPIRATION_DAYS)
   .then((count) => {
-    cronLogger.info({ count, event: 'startup' }, 'Expired stale quotes on startup');
+    cronLogger.info(
+      { count, expirationDays: env.QUOTE_EXPIRATION_DAYS, event: 'startup' },
+      'Expired stale quotes on startup'
+    );
   })
   .catch((error) => {
     cronLogger.error({ error, event: 'startup' }, 'Failed to expire quotes on startup');
@@ -228,9 +231,12 @@ let expireQuotesIntervalId: NodeJS.Timeout | null = null;
 
 expireQuotesIntervalId = setInterval(async () => {
   try {
-    const count = await expireStaleQuotes();
+    const count = await expireStaleQuotes(env.QUOTE_EXPIRATION_DAYS);
     if (count > 0) {
-      cronLogger.info({ count }, 'Expired stale quotes');
+      cronLogger.info(
+        { count, expirationDays: env.QUOTE_EXPIRATION_DAYS },
+        'Expired stale quotes'
+      );
     }
   } catch (error) {
     cronLogger.error({ error }, 'Failed to expire quotes');

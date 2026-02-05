@@ -35,6 +35,9 @@ const envSchema = z.object({
   WORKIZ_API_KEY: z.string().optional(),
   WORKIZ_API_URL: z.string().url().default('https://api.workiz.com/api/v1'),
   WORKIZ_ENABLED: z.coerce.boolean().default(false),
+
+  // Quote Expiration
+  QUOTE_EXPIRATION_DAYS: z.coerce.number().int().positive().default(14),
 });
 
 export type Env = z.infer<typeof envSchema>;
