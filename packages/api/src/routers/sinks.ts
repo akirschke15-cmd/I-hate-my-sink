@@ -3,157 +3,14 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure, adminProcedure } from '../trpc';
 import { db } from '@ihms/db';
 import { sinks, measurements } from '@ihms/db/schema';
-import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, asc, sql, ilike, or } from 'drizzle-orm';
 import {
   listSinksSchema,
   createSinkSchema,
   updateSinkSchema,
   matchToMeasurementSchema,
 } from '@ihms/shared';
-
-// Matching algorithm types (exported for type inference)
-export interface SinkMatch {
-  sink: typeof sinks.$inferSelect;
-  score: number;
-  fitRating: 'excellent' | 'good' | 'marginal';
-  reasons: string[];
-}
-
-// Sink fitting clearances (inches)
-const CLEARANCES = {
-  MIN_CABINET_CLEARANCE: 2, // Minimum clearance from sink edge to cabinet edge
-  OPTIMAL_CABINET_CLEARANCE: 3, // Optimal clearance for easy installation
-  UNDERMOUNT_EXTRA_CLEARANCE: 0.5, // Extra clearance needed for undermount clips
-};
-
-function calculateMatchScore(
-  sink: typeof sinks.$inferSelect,
-  measurement: typeof measurements.$inferSelect
-): SinkMatch {
-  let score = 0;
-  const reasons: string[] = [];
-
-  const sinkWidth = parseFloat(sink.widthInches);
-  const sinkDepth = parseFloat(sink.depthInches);
-  const cabinetWidth = parseFloat(measurement.cabinetWidthInches);
-  const cabinetDepth = parseFloat(measurement.cabinetDepthInches);
-
-  // Calculate available space (account for countertop overhangs if present)
-  const frontOverhang = measurement.countertopOverhangFrontInches
-    ? parseFloat(measurement.countertopOverhangFrontInches)
-    : 0;
-  const sideOverhang = measurement.countertopOverhangSidesInches
-    ? parseFloat(measurement.countertopOverhangSidesInches)
-    : 0;
-
-  const availableWidth = cabinetWidth - 2 * sideOverhang;
-  const availableDepth = cabinetDepth - frontOverhang;
-
-  // Width fit scoring (max 30 points)
-  const widthClearance = availableWidth - sinkWidth;
-  if (widthClearance >= CLEARANCES.OPTIMAL_CABINET_CLEARANCE * 2) {
-    score += 30;
-    reasons.push('Excellent width fit with optimal clearance');
-  } else if (widthClearance >= CLEARANCES.MIN_CABINET_CLEARANCE * 2) {
-    score += 20;
-    reasons.push('Good width fit with adequate clearance');
-  } else if (widthClearance >= 0) {
-    score += 10;
-    reasons.push('Tight width fit - may require careful installation');
-  } else {
-    score -= 50; // Sink too wide - disqualifying
-    reasons.push('WARNING: Sink too wide for cabinet');
-  }
-
-  // Depth fit scoring (max 30 points)
-  const depthClearance = availableDepth - sinkDepth;
-  if (depthClearance >= CLEARANCES.OPTIMAL_CABINET_CLEARANCE) {
-    score += 30;
-    reasons.push('Excellent depth fit with optimal clearance');
-  } else if (depthClearance >= CLEARANCES.MIN_CABINET_CLEARANCE) {
-    score += 20;
-    reasons.push('Good depth fit with adequate clearance');
-  } else if (depthClearance >= 0) {
-    score += 10;
-    reasons.push('Tight depth fit - may require careful installation');
-  } else {
-    score -= 50; // Sink too deep - disqualifying
-    reasons.push('WARNING: Sink too deep for cabinet');
-  }
-
-  // Mounting style match (max 25 points)
-  if (measurement.mountingStyle) {
-    // Map measurement mounting style enum to sink mounting style enum
-    const measurementStyleMap: Record<string, string> = {
-      drop_in: 'drop_in',
-      undermount: 'undermount',
-      farmhouse: 'farmhouse',
-      flush_mount: 'flush_mount',
-    };
-    const normalizedMeasurementStyle = measurementStyleMap[measurement.mountingStyle];
-
-    if (sink.mountingStyle === normalizedMeasurementStyle) {
-      score += 25;
-      reasons.push(`Matches preferred mounting style: ${sink.mountingStyle.replace('_', '-')}`);
-    } else {
-      // Partial points for compatible styles
-      if (
-        (normalizedMeasurementStyle === 'drop_in' && sink.mountingStyle === 'flush_mount') ||
-        (normalizedMeasurementStyle === 'flush_mount' && sink.mountingStyle === 'drop_in')
-      ) {
-        score += 15;
-        reasons.push('Compatible mounting style (may require adjustment)');
-      } else {
-        score += 5;
-        reasons.push(`Different mounting style: ${sink.mountingStyle.replace('_', '-')}`);
-      }
-    }
-
-    // Extra clearance check for undermount
-    if (sink.mountingStyle === 'undermount') {
-      if (widthClearance < CLEARANCES.MIN_CABINET_CLEARANCE * 2 + CLEARANCES.UNDERMOUNT_EXTRA_CLEARANCE * 2) {
-        score -= 5;
-        reasons.push('Undermount may need extra width clearance for clips');
-      }
-    }
-  } else {
-    score += 15; // No preference - give partial points
-    reasons.push('No mounting style preference specified');
-  }
-
-  // Bowl count consideration (max 15 points)
-  if (measurement.existingSinkBowlCount) {
-    if (sink.bowlCount === measurement.existingSinkBowlCount) {
-      score += 15;
-      reasons.push(`Matches existing bowl count: ${sink.bowlCount}`);
-    } else if (Math.abs(sink.bowlCount - measurement.existingSinkBowlCount) === 1) {
-      score += 8;
-      reasons.push(`Bowl count differs by 1 (sink: ${sink.bowlCount}, existing: ${measurement.existingSinkBowlCount})`);
-    } else {
-      score += 3;
-      reasons.push(`Different bowl count: ${sink.bowlCount}`);
-    }
-  } else {
-    score += 10; // No existing sink reference
-  }
-
-  // Determine fit rating
-  let fitRating: 'excellent' | 'good' | 'marginal';
-  if (score >= 80) {
-    fitRating = 'excellent';
-  } else if (score >= 50) {
-    fitRating = 'good';
-  } else {
-    fitRating = 'marginal';
-  }
-
-  return {
-    sink,
-    score,
-    fitRating,
-    reasons,
-  };
-}
+import { matchSinksToMeasurement } from '../services/sink-matching';
 
 export const sinkRouter = router({
   // List sinks with filtering
@@ -165,6 +22,18 @@ export const sinkRouter = router({
     }
     if (input.mountingStyle) {
       conditions.push(eq(sinks.mountingStyle, input.mountingStyle));
+    }
+    if (input.series) {
+      conditions.push(eq(sinks.series, input.series));
+    }
+    if (input.bowlConfiguration) {
+      conditions.push(eq(sinks.bowlConfiguration, input.bowlConfiguration));
+    }
+    if (input.installationType) {
+      conditions.push(eq(sinks.installationType, input.installationType));
+    }
+    if (input.isWorkstation !== undefined) {
+      conditions.push(eq(sinks.isWorkstation, input.isWorkstation));
     }
     if (input.minWidthInches !== undefined) {
       conditions.push(gte(sinks.widthInches, input.minWidthInches.toString()));
@@ -178,6 +47,16 @@ export const sinkRouter = router({
     if (input.maxDepthInches !== undefined) {
       conditions.push(lte(sinks.depthInches, input.maxDepthInches.toString()));
     }
+    if (input.maxMinCabinetWidth !== undefined) {
+      // Filter sinks where min cabinet width <= provided value
+      // Check both IHMS and manufacturer min cabinet width
+      conditions.push(
+        or(
+          lte(sinks.ihmsMinCabinetWidthInches, input.maxMinCabinetWidth.toString()),
+          lte(sinks.mfgMinCabinetWidthInches, input.maxMinCabinetWidth.toString())
+        )!
+      );
+    }
     if (input.bowlCount !== undefined) {
       conditions.push(eq(sinks.bowlCount, input.bowlCount));
     }
@@ -185,13 +64,26 @@ export const sinkRouter = router({
       conditions.push(eq(sinks.isActive, input.isActive));
     }
 
+    // Search filter (name or model number)
+    if (input.search) {
+      const searchTerm = `%${input.search}%`;
+      conditions.push(
+        or(
+          ilike(sinks.name, searchTerm),
+          ilike(sinks.modelNumber, searchTerm)
+        )!
+      );
+    }
+
     // Determine sort column
-    const sortColumn = {
+    const sortColumnMap = {
       name: sinks.name,
       price: sinks.basePrice,
       width: sinks.widthInches,
+      series: sinks.series,
       createdAt: sinks.createdAt,
-    }[input.sortBy];
+    } as const;
+    const sortColumn = sortColumnMap[input.sortBy] ?? sinks.name;
 
     const orderFn = input.sortOrder === 'asc' ? asc : desc;
 
@@ -236,6 +128,15 @@ export const sinkRouter = router({
       return sink;
     }),
 
+  // Get available series options
+  getSeriesOptions: protectedProcedure.query(async ({ ctx }) => {
+    const result = await db
+      .selectDistinct({ series: sinks.series })
+      .from(sinks)
+      .where(and(eq(sinks.companyId, ctx.user.companyId), eq(sinks.isActive, true)));
+    return result.map((r) => r.series).filter(Boolean);
+  }),
+
   // Match sinks to a measurement
   matchToMeasurement: protectedProcedure
     .input(matchToMeasurementSchema)
@@ -274,12 +175,23 @@ export const sinkRouter = router({
           )
         );
 
-      // Score and rank all candidates
-      const matches: SinkMatch[] = candidateSinks
-        .map((sink) => calculateMatchScore(sink, measurement))
-        .filter((match) => match.score > 0) // Filter out disqualified sinks
-        .sort((a, b) => b.score - a.score) // Sort by score descending
-        .slice(0, input.limit);
+      // Use the new matching algorithm
+      const allMatches = matchSinksToMeasurement(
+        candidateSinks,
+        measurement,
+        input.preferences,
+        input.limit + 5 // Get extra to split into feasible/no-go
+      );
+
+      // Separate feasible from no-go matches
+      const feasibleMatches = allMatches.filter((m) => m.fitRating !== 'no_go');
+      const noGoMatches = allMatches.filter((m) => m.fitRating === 'no_go').slice(0, 5);
+
+      // Convert to old interface for backward compatibility (add score field as alias)
+      const matches = feasibleMatches.slice(0, input.limit).map((match) => ({
+        ...match,
+        score: match.overallScore, // backward compat
+      }));
 
       return {
         measurement: {
@@ -292,6 +204,10 @@ export const sinkRouter = router({
           location: measurement.location,
         },
         matches,
+        noGoMatches: noGoMatches.map((match) => ({
+          ...match,
+          score: match.overallScore, // backward compat
+        })),
         totalCandidates: candidateSinks.length,
       };
     }),
@@ -327,6 +243,28 @@ export const sinkRouter = router({
         laborCost: input.laborCost.toString(),
         imageUrl: input.imageUrl,
         isActive: input.isActive,
+        // Karran catalogue fields
+        series: input.series,
+        manufacturer: input.manufacturer,
+        modelNumber: input.modelNumber,
+        installationType: input.installationType,
+        bowlConfiguration: input.bowlConfiguration,
+        mfgMinCabinetWidthInches: input.mfgMinCabinetWidthInches?.toString(),
+        ihmsMinCabinetWidthInches: input.ihmsMinCabinetWidthInches?.toString(),
+        faucetHoles: input.faucetHoles,
+        drainSize: input.drainSize,
+        drainLocation: input.drainLocation,
+        cornerRadius: input.cornerRadius,
+        apronDepthInches: input.apronDepthInches?.toString(),
+        steelGauge: input.steelGauge,
+        heatSafeTempF: input.heatSafeTempF,
+        templateIncluded: input.templateIncluded,
+        clipsIncluded: input.clipsIncluded,
+        isWorkstation: input.isWorkstation,
+        accessoriesIncluded: input.accessoriesIncluded,
+        bowlDimensions: input.bowlDimensions,
+        availableColors: input.availableColors,
+        countertopCompatibility: input.countertopCompatibility,
       })
       .returning();
 
@@ -372,15 +310,60 @@ export const sinkRouter = router({
     if (updateData.name !== undefined) dbUpdateData.name = updateData.name;
     if (updateData.description !== undefined) dbUpdateData.description = updateData.description;
     if (updateData.material !== undefined) dbUpdateData.material = updateData.material;
-    if (updateData.mountingStyle !== undefined) dbUpdateData.mountingStyle = updateData.mountingStyle;
-    if (updateData.widthInches !== undefined) dbUpdateData.widthInches = updateData.widthInches.toString();
-    if (updateData.depthInches !== undefined) dbUpdateData.depthInches = updateData.depthInches.toString();
-    if (updateData.heightInches !== undefined) dbUpdateData.heightInches = updateData.heightInches.toString();
+    if (updateData.mountingStyle !== undefined)
+      dbUpdateData.mountingStyle = updateData.mountingStyle;
+    if (updateData.widthInches !== undefined)
+      dbUpdateData.widthInches = updateData.widthInches.toString();
+    if (updateData.depthInches !== undefined)
+      dbUpdateData.depthInches = updateData.depthInches.toString();
+    if (updateData.heightInches !== undefined)
+      dbUpdateData.heightInches = updateData.heightInches.toString();
     if (updateData.bowlCount !== undefined) dbUpdateData.bowlCount = updateData.bowlCount;
-    if (updateData.basePrice !== undefined) dbUpdateData.basePrice = updateData.basePrice.toString();
-    if (updateData.laborCost !== undefined) dbUpdateData.laborCost = updateData.laborCost.toString();
+    if (updateData.basePrice !== undefined)
+      dbUpdateData.basePrice = updateData.basePrice.toString();
+    if (updateData.laborCost !== undefined)
+      dbUpdateData.laborCost = updateData.laborCost.toString();
     if (updateData.imageUrl !== undefined) dbUpdateData.imageUrl = updateData.imageUrl;
     if (updateData.isActive !== undefined) dbUpdateData.isActive = updateData.isActive;
+
+    // Karran catalogue fields
+    if (updateData.series !== undefined) dbUpdateData.series = updateData.series;
+    if (updateData.manufacturer !== undefined)
+      dbUpdateData.manufacturer = updateData.manufacturer;
+    if (updateData.modelNumber !== undefined) dbUpdateData.modelNumber = updateData.modelNumber;
+    if (updateData.installationType !== undefined)
+      dbUpdateData.installationType = updateData.installationType;
+    if (updateData.bowlConfiguration !== undefined)
+      dbUpdateData.bowlConfiguration = updateData.bowlConfiguration;
+    if (updateData.mfgMinCabinetWidthInches !== undefined)
+      dbUpdateData.mfgMinCabinetWidthInches = updateData.mfgMinCabinetWidthInches.toString();
+    if (updateData.ihmsMinCabinetWidthInches !== undefined)
+      dbUpdateData.ihmsMinCabinetWidthInches = updateData.ihmsMinCabinetWidthInches.toString();
+    if (updateData.faucetHoles !== undefined) dbUpdateData.faucetHoles = updateData.faucetHoles;
+    if (updateData.drainSize !== undefined) dbUpdateData.drainSize = updateData.drainSize;
+    if (updateData.drainLocation !== undefined)
+      dbUpdateData.drainLocation = updateData.drainLocation;
+    if (updateData.cornerRadius !== undefined)
+      dbUpdateData.cornerRadius = updateData.cornerRadius;
+    if (updateData.apronDepthInches !== undefined)
+      dbUpdateData.apronDepthInches = updateData.apronDepthInches.toString();
+    if (updateData.steelGauge !== undefined) dbUpdateData.steelGauge = updateData.steelGauge;
+    if (updateData.heatSafeTempF !== undefined)
+      dbUpdateData.heatSafeTempF = updateData.heatSafeTempF;
+    if (updateData.templateIncluded !== undefined)
+      dbUpdateData.templateIncluded = updateData.templateIncluded;
+    if (updateData.clipsIncluded !== undefined)
+      dbUpdateData.clipsIncluded = updateData.clipsIncluded;
+    if (updateData.isWorkstation !== undefined)
+      dbUpdateData.isWorkstation = updateData.isWorkstation;
+    if (updateData.accessoriesIncluded !== undefined)
+      dbUpdateData.accessoriesIncluded = updateData.accessoriesIncluded;
+    if (updateData.bowlDimensions !== undefined)
+      dbUpdateData.bowlDimensions = updateData.bowlDimensions;
+    if (updateData.availableColors !== undefined)
+      dbUpdateData.availableColors = updateData.availableColors;
+    if (updateData.countertopCompatibility !== undefined)
+      dbUpdateData.countertopCompatibility = updateData.countertopCompatibility;
 
     const [updated] = await db.update(sinks).set(dbUpdateData).where(eq(sinks.id, id)).returning();
 

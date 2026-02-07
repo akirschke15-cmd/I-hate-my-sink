@@ -1,25 +1,7 @@
 export type UserRole = 'admin' | 'salesperson';
 
-export type SinkMaterial =
-  | 'stainless_steel'
-  | 'granite_composite'
-  | 'cast_iron'
-  | 'fireclay'
-  | 'copper'
-  | 'porcelain';
-
-export type SinkMountingStyle = 'undermount' | 'drop_in' | 'farmhouse' | 'flush_mount';
-
-export type CountertopMaterial =
-  | 'granite'
-  | 'quartz'
-  | 'marble'
-  | 'laminate'
-  | 'solid_surface'
-  | 'butcher_block'
-  | 'concrete'
-  | 'tile'
-  | 'stainless_steel';
+// Note: SinkMaterial, SinkMountingStyle, and CountertopMaterial are now exported from schema files
+// (sink.ts and measurement.ts) to avoid duplication and ensure single source of truth
 
 export type QuoteStatus = 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired';
 

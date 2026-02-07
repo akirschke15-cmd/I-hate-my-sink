@@ -7,6 +7,7 @@ const MATERIAL_OPTIONS = [
   { value: '', label: 'All Materials' },
   { value: 'stainless_steel', label: 'Stainless Steel' },
   { value: 'granite_composite', label: 'Granite Composite' },
+  { value: 'quartz_composite', label: 'Quartz Composite' },
   { value: 'cast_iron', label: 'Cast Iron' },
   { value: 'fireclay', label: 'Fireclay' },
   { value: 'copper', label: 'Copper' },
@@ -21,11 +22,38 @@ const MOUNTING_STYLE_OPTIONS = [
   { value: 'flush_mount', label: 'Flush Mount' },
 ];
 
+const SERIES_OPTIONS = [
+  { value: '', label: 'All Series' },
+  { value: 'quartz_farmhouse', label: 'Quartz Farmhouse' },
+  { value: 'quartz_undermount', label: 'Quartz Undermount' },
+  { value: 'quartz_top_mount', label: 'Quartz Top Mount' },
+  { value: 'quartz_workstation', label: 'Quartz Workstation' },
+  { value: 'quartz_seamless', label: 'Quartz Seamless' },
+  { value: 'elite_stainless', label: 'Elite Stainless' },
+  { value: 'elite_workstation', label: 'Elite Workstation' },
+  { value: 'matrix_workstation', label: 'Matrix Workstation' },
+  { value: 'select_stainless', label: 'Select Stainless' },
+  { value: 'profile_stainless', label: 'Profile Stainless' },
+  { value: 'edge_stainless', label: 'Edge Stainless' },
+  { value: 'fireclay', label: 'Fireclay' },
+  { value: 'sternhagen', label: 'Sternhagen' },
+  { value: 'cinox', label: 'Cinox' },
+];
+
 const BOWL_COUNT_OPTIONS = [
   { value: '', label: 'Any Bowl Count' },
   { value: '1', label: 'Single Bowl' },
   { value: '2', label: 'Double Bowl' },
   { value: '3', label: 'Triple Bowl' },
+];
+
+const BOWL_CONFIG_OPTIONS = [
+  { value: '', label: 'Any Bowl Config' },
+  { value: 'single', label: 'Single Bowl' },
+  { value: 'double_equal', label: 'Double Equal' },
+  { value: 'large_small', label: 'Large/Small' },
+  { value: 'triple', label: 'Triple Bowl' },
+  { value: 'bar', label: 'Bar' },
 ];
 
 const SORT_OPTIONS = [
@@ -37,7 +65,7 @@ const SORT_OPTIONS = [
   { value: 'width-desc', label: 'Width (Largest)' },
 ];
 
-type Material = 'stainless_steel' | 'granite_composite' | 'cast_iron' | 'fireclay' | 'copper' | 'porcelain';
+type Material = 'stainless_steel' | 'granite_composite' | 'quartz_composite' | 'cast_iron' | 'fireclay' | 'copper' | 'porcelain';
 type MountingStyle = 'undermount' | 'drop_in' | 'farmhouse' | 'flush_mount';
 type SortBy = 'name' | 'price' | 'width' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
@@ -56,12 +84,24 @@ interface Sink {
   basePrice: string;
   laborCost: string;
   imageUrl: string | null;
+  series: string | null;
+  manufacturer: string | null;
+  modelNumber: string | null;
+  installationType: string | null;
+  bowlConfiguration: string | null;
+  mfgMinCabinetWidthInches: string | null;
+  isWorkstation: boolean;
+  availableColors: { code: string; name: string; hex?: string }[] | null;
+  accessoriesIncluded: string[] | null;
 }
 
 export function SinksPage() {
   const [material, setMaterial] = useState<Material | ''>('');
   const [mountingStyle, setMountingStyle] = useState<MountingStyle | ''>('');
   const [bowlCount, setBowlCount] = useState<string>('');
+  const [series, setSeries] = useState<string>('');
+  const [bowlConfiguration, setBowlConfiguration] = useState<string>('');
+  const [showWorkstationOnly, setShowWorkstationOnly] = useState(false);
   const [sortValue, setSortValue] = useState('name-asc');
 
   const [sortBy, sortOrder] = sortValue.split('-') as [SortBy, SortOrder];
@@ -70,6 +110,9 @@ export function SinksPage() {
     material: material || undefined,
     mountingStyle: mountingStyle || undefined,
     bowlCount: bowlCount ? parseInt(bowlCount) : undefined,
+    series: series || undefined,
+    bowlConfiguration: bowlConfiguration || undefined,
+    isWorkstation: showWorkstationOnly ? true : undefined,
     isActive: true,
     sortBy,
     sortOrder,
@@ -88,6 +131,13 @@ export function SinksPage() {
       .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join('-');
+  };
+
+  const formatSeries = (seriesValue: string) => {
+    return seriesValue
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   const formatPrice = (price: string) => {
@@ -142,13 +192,21 @@ export function SinksPage() {
             </svg>
             <h2 className="text-lg font-semibold text-gray-900">Filter Sinks</h2>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="shadow-soft">
               <Select
                 label="Material"
                 options={MATERIAL_OPTIONS}
                 value={material}
                 onChange={(e) => setMaterial(e.target.value as Material | '')}
+              />
+            </div>
+            <div className="shadow-soft">
+              <Select
+                label="Series"
+                options={SERIES_OPTIONS}
+                value={series}
+                onChange={(e) => setSeries(e.target.value)}
               />
             </div>
             <div className="shadow-soft">
@@ -169,11 +227,30 @@ export function SinksPage() {
             </div>
             <div className="shadow-soft">
               <Select
+                label="Bowl Configuration"
+                options={BOWL_CONFIG_OPTIONS}
+                value={bowlConfiguration}
+                onChange={(e) => setBowlConfiguration(e.target.value)}
+              />
+            </div>
+            <div className="shadow-soft">
+              <Select
                 label="Sort By"
                 options={SORT_OPTIONS}
                 value={sortValue}
                 onChange={(e) => setSortValue(e.target.value)}
               />
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={showWorkstationOnly}
+                  onChange={(e) => setShowWorkstationOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700">Workstation Only</span>
+              </label>
             </div>
             <div className="flex items-end">
               <Button
@@ -182,6 +259,9 @@ export function SinksPage() {
                   setMaterial('');
                   setMountingStyle('');
                   setBowlCount('');
+                  setSeries('');
+                  setBowlConfiguration('');
+                  setShowWorkstationOnly(false);
                   setSortValue('name-asc');
                 }}
                 className="w-full"
@@ -235,17 +315,20 @@ export function SinksPage() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900">No sinks found</h3>
             <p className="mt-2 text-gray-600">
-              {material || mountingStyle || bowlCount
+              {material || mountingStyle || bowlCount || series || bowlConfiguration || showWorkstationOnly
                 ? 'Try adjusting your filters to see more results.'
                 : 'No sinks have been added to the catalog yet.'}
             </p>
-            {(material || mountingStyle || bowlCount) && (
+            {(material || mountingStyle || bowlCount || series || bowlConfiguration || showWorkstationOnly) && (
               <Button
                 variant="secondary"
                 onClick={() => {
                   setMaterial('');
                   setMountingStyle('');
                   setBowlCount('');
+                  setSeries('');
+                  setBowlConfiguration('');
+                  setShowWorkstationOnly(false);
                 }}
                 className="mt-4"
               >
@@ -293,8 +376,24 @@ export function SinksPage() {
 
                 {/* Sink Details */}
                 <div className="p-5">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    {sink.series && (
+                      <span className="inline-block rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+                        {formatSeries(sink.series)}
+                      </span>
+                    )}
+                    {sink.isWorkstation && (
+                      <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                        Workstation
+                      </span>
+                    )}
+                  </div>
+
                   <h3 className="mb-1 text-lg font-semibold text-gray-900">{sink.name}</h3>
-                  <p className="mb-4 text-sm font-medium text-primary-600">SKU: {sink.sku}</p>
+                  <p className="mb-1 text-sm font-medium text-primary-600">SKU: {sink.sku}</p>
+                  {sink.modelNumber && (
+                    <p className="mb-3 text-xs text-gray-500">Model: {sink.modelNumber}</p>
+                  )}
 
                   {sink.description && (
                     <p className="mb-4 line-clamp-2 text-sm text-gray-600">{sink.description}</p>
@@ -374,6 +473,25 @@ export function SinksPage() {
                         {sink.bowlCount === 1 ? 'Single' : sink.bowlCount === 2 ? 'Double' : 'Triple'}
                       </span>
                     </div>
+                    {sink.mfgMinCabinetWidthInches && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg
+                          className="h-4 w-4 text-primary-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                          />
+                        </svg>
+                        <span className="font-medium text-gray-700">Min Cabinet:</span>
+                        <span className="text-gray-600">{sink.mfgMinCabinetWidthInches}&quot;</span>
+                      </div>
+                    )}
                     {parseFloat(sink.laborCost) > 0 && (
                       <div className="flex items-center gap-2 text-sm">
                         <svg
@@ -394,6 +512,35 @@ export function SinksPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Available Colors */}
+                  {sink.availableColors && sink.availableColors.length > 0 && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Colors:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {sink.availableColors.map((color) => (
+                          <div
+                            key={color.code}
+                            className="h-5 w-5 rounded-full border border-gray-300"
+                            style={{ backgroundColor: color.hex || '#ccc' }}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Accessories */}
+                  {sink.accessoriesIncluded && sink.accessoriesIncluded.length > 0 && (
+                    <div className="mt-3 rounded-lg bg-green-50 p-2">
+                      <p className="text-xs font-medium text-green-800">Accessories Included:</p>
+                      <ul className="mt-1 space-y-0.5">
+                        {sink.accessoriesIncluded.map((accessory, i) => (
+                          <li key={i} className="text-xs text-green-700">{accessory}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

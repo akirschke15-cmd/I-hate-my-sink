@@ -24,9 +24,11 @@ export function NewMeasurementPage() {
 
   const [formData, setFormData] = useState<MeasurementFormData>({
     location: '',
+    existingSinkMaterial: '',
     cabinetWidthInches: '',
     cabinetDepthInches: '',
     cabinetHeightInches: '',
+    cabinetIntegrity: '',
     countertopMaterial: '',
     countertopThicknessInches: '',
     countertopOverhangFrontInches: '',
@@ -38,10 +40,15 @@ export function NewMeasurementPage() {
     existingSinkDepthInches: '',
     existingSinkBowlCount: '',
     backsplashHeightInches: '',
+    backsplashOverhangInches: '',
     windowClearanceInches: '',
     plumbingCenterlineFromLeft: '',
+    supplyValvePosition: '',
+    basinDepthClearanceInches: '',
     garbageDisposal: false,
     dishwasherAirGap: false,
+    roSystemPresent: false,
+    roTankClearanceInches: '',
     notes: '',
   });
   const [error, setError] = useState('');

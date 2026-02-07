@@ -12,6 +12,17 @@ export const countertopMaterials = [
   'stainless_steel',
 ] as const;
 
+export const existingSinkMaterials = [
+  'cast_iron',
+  'stainless_steel',
+  'composite',
+  'unknown',
+] as const;
+
+export const cabinetIntegrities = ['good', 'questionable', 'compromised'] as const;
+
+export const supplyValvePositions = ['floor', 'low_back_wall', 'high_back_wall'] as const;
+
 export const measurementSchema = z.object({
   customerId: z.string().uuid('Invalid customer ID'),
   // Cabinet measurements (in inches)
@@ -34,6 +45,32 @@ export const measurementSchema = z.object({
     .positive('Thickness must be positive')
     .max(4, 'Thickness cannot exceed 4 inches')
     .optional(),
+  countertopOverhangFrontInches: z.number().min(0).max(12).optional(),
+  countertopOverhangSidesInches: z.number().min(0).max(12).optional(),
+  // Mounting style
+  mountingStyle: z.enum(['drop_in', 'undermount', 'farmhouse', 'flush_mount'] as const).optional(),
+  // Faucet configuration
+  faucetHoleCount: z.number().int().min(0).max(5).optional(),
+  faucetHoleSpacing: z.string().max(50).optional(),
+  // Existing sink (if replacing)
+  existingSinkWidthInches: z.number().positive().max(60).optional(),
+  existingSinkDepthInches: z.number().positive().max(36).optional(),
+  existingSinkBowlCount: z.number().int().min(1).max(3).optional(),
+  // Clearances
+  backsplashHeightInches: z.number().min(0).max(24).optional(),
+  windowClearanceInches: z.number().min(0).max(120).optional(),
+  plumbingCenterlineFromLeft: z.number().min(0).max(120).optional(),
+  // Accessories
+  garbageDisposal: z.boolean().optional(),
+  dishwasherAirGap: z.boolean().optional(),
+  // Colin's measurement hierarchy
+  existingSinkMaterial: z.enum(existingSinkMaterials).optional(),
+  backsplashOverhangInches: z.number().min(0).max(12).optional(),
+  cabinetIntegrity: z.enum(cabinetIntegrities).optional(),
+  roSystemPresent: z.boolean().optional(),
+  roTankClearanceInches: z.number().min(0).max(24).optional(),
+  supplyValvePosition: z.enum(supplyValvePositions).optional(),
+  basinDepthClearanceInches: z.number().min(0).max(24).optional(),
   // Existing cutout (optional, for replacements)
   existingCutoutWidthInches: z
     .number()
@@ -59,3 +96,8 @@ export const updateMeasurementSchema = measurementSchema.partial().extend({
 });
 
 export type MeasurementInput = z.infer<typeof measurementSchema>;
+export type UpdateMeasurementInput = z.infer<typeof updateMeasurementSchema>;
+export type CountertopMaterial = (typeof countertopMaterials)[number];
+export type ExistingSinkMaterial = (typeof existingSinkMaterials)[number];
+export type CabinetIntegrity = (typeof cabinetIntegrities)[number];
+export type SupplyValvePosition = (typeof supplyValvePositions)[number];

@@ -35,6 +35,25 @@ export const mountingStyleEnum = pgEnum('mounting_style', [
   'flush_mount',
 ]);
 
+export const existingSinkMaterialEnum = pgEnum('existing_sink_material', [
+  'cast_iron',
+  'stainless_steel',
+  'composite',
+  'unknown',
+]);
+
+export const cabinetIntegrityEnum = pgEnum('cabinet_integrity', [
+  'good',
+  'questionable',
+  'compromised',
+]);
+
+export const supplyValvePositionEnum = pgEnum('supply_valve_position', [
+  'floor',
+  'low_back_wall',
+  'high_back_wall',
+]);
+
 export const measurements = pgTable('measurements', {
   id: uuid('id').primaryKey().defaultRandom(),
   companyId: uuid('company_id')
@@ -77,6 +96,14 @@ export const measurements = pgTable('measurements', {
   // Accessories
   garbageDisposal: boolean('garbage_disposal').default(false),
   dishwasherAirGap: boolean('dishwasher_air_gap').default(false),
+  // Colin's measurement hierarchy fields
+  existingSinkMaterial: existingSinkMaterialEnum('existing_sink_material'),
+  backsplashOverhangInches: decimal('backsplash_overhang_inches', { precision: 4, scale: 2 }),
+  cabinetIntegrity: cabinetIntegrityEnum('cabinet_integrity'),
+  roSystemPresent: boolean('ro_system_present').default(false),
+  roTankClearanceInches: decimal('ro_tank_clearance_inches', { precision: 4, scale: 2 }),
+  supplyValvePosition: supplyValvePositionEnum('supply_valve_position'),
+  basinDepthClearanceInches: decimal('basin_depth_clearance_inches', { precision: 4, scale: 2 }),
   // Legacy fields (kept for backwards compatibility)
   existingCutoutWidthInches: decimal('existing_cutout_width_inches', { precision: 6, scale: 2 }),
   existingCutoutDepthInches: decimal('existing_cutout_depth_inches', { precision: 6, scale: 2 }),

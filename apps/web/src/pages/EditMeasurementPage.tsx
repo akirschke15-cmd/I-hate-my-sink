@@ -27,9 +27,11 @@ export function EditMeasurementPage() {
 
   const [formData, setFormData] = useState<MeasurementFormData>({
     location: '',
+    existingSinkMaterial: '',
     cabinetWidthInches: '',
     cabinetDepthInches: '',
     cabinetHeightInches: '',
+    cabinetIntegrity: '',
     countertopMaterial: '',
     countertopThicknessInches: '',
     countertopOverhangFrontInches: '',
@@ -41,10 +43,15 @@ export function EditMeasurementPage() {
     existingSinkDepthInches: '',
     existingSinkBowlCount: '',
     backsplashHeightInches: '',
+    backsplashOverhangInches: '',
     windowClearanceInches: '',
     plumbingCenterlineFromLeft: '',
+    supplyValvePosition: '',
+    basinDepthClearanceInches: '',
     garbageDisposal: false,
     dishwasherAirGap: false,
+    roSystemPresent: false,
+    roTankClearanceInches: '',
     notes: '',
   });
   const [error, setError] = useState('');
@@ -53,9 +60,11 @@ export function EditMeasurementPage() {
     if (measurement) {
       setFormData({
         location: measurement.location || '',
+        existingSinkMaterial: measurement.existingSinkMaterial || '',
         cabinetWidthInches: measurement.cabinetWidthInches || '',
         cabinetDepthInches: measurement.cabinetDepthInches || '',
         cabinetHeightInches: measurement.cabinetHeightInches || '',
+        cabinetIntegrity: measurement.cabinetIntegrity || '',
         countertopMaterial: measurement.countertopMaterial || '',
         countertopThicknessInches: measurement.countertopThicknessInches || '',
         countertopOverhangFrontInches: measurement.countertopOverhangFrontInches || '',
@@ -67,10 +76,15 @@ export function EditMeasurementPage() {
         existingSinkDepthInches: measurement.existingSinkDepthInches || '',
         existingSinkBowlCount: measurement.existingSinkBowlCount?.toString() || '',
         backsplashHeightInches: measurement.backsplashHeightInches || '',
+        backsplashOverhangInches: measurement.backsplashOverhangInches || '',
         windowClearanceInches: measurement.windowClearanceInches || '',
         plumbingCenterlineFromLeft: measurement.plumbingCenterlineFromLeft || '',
+        supplyValvePosition: measurement.supplyValvePosition || '',
+        basinDepthClearanceInches: measurement.basinDepthClearanceInches || '',
         garbageDisposal: measurement.garbageDisposal || false,
         dishwasherAirGap: measurement.dishwasherAirGap || false,
+        roSystemPresent: measurement.roSystemPresent || false,
+        roTankClearanceInches: measurement.roTankClearanceInches || '',
         notes: measurement.notes || '',
       });
     }
